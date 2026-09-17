@@ -25,51 +25,63 @@ class LevelGenerator {
     final maxStackDepth = _stackDepth(level);
     final emptySlots = _emptySlots(level);
     final complexity = _complexity(level, difficulty);
-    final totalSlots = shelfCount * 3;
-    final usableSlots = max(3, totalSlots - emptySlots);
-    final groups = max(1, usableSlots ~/ 3);
-    final items = <SortingItem>[];
 
-    // Each product is created in a complete triple. The shuffle and shelf
-    // distribution make the triples progressively harder to discover.
-    for (var group = 0; group < groups; group++) {
-      final productId = _productForGroup(
-        group,
-        itemTypes,
-        random,
-        complexity,
-      );
+    // Keep every level compatible with the product assets that actually exist
+    // in the repository. Every group is a complete match-three set.
+    final totalGroups = max(2, shelfCount + max(0, (shelfCount * 2 - emptySlots) ~/ 3));
+    final items = <SortingItem>[];
+    final shelves = List.generate(shelfCount, (_) => <int>[]);
+
+    for (var group = 0; group < totalGroups; group++) {
+      final productId = _productForGroup(group, itemTypes, random, complexity);
+      final preferredShelf = group % shelfCount;
+      final shelfOrder = List<int>.generate(shelfCount, (index) => (preferredShelf + index) % shelfCount);
+      shelfOrder.shuffle(random);
+
       for (var copy = 0; copy < 3; copy++) {
+        var shelf = shelfOrder[(copy + group) % shelfOrder.length];
+        if (shelves[shelf].length >= maxStackDepth) {
+          shelf = _findShelfWithSpace(shelves, maxStackDepth, random);
+        }
+        shelves[shelf].add(productId);
+      }
+    }
+
+    // Prevent a level from being generated with an overfull shelf. Rebalance
+    // deterministically while retaining every complete triple.
+    _rebalance(shelves, maxStackDepth, random);
+
+    for (var shelfIndex = 0; shelfIndex < shelves.length; shelfIndex++) {
+      final stack = shelves[shelfIndex];
+      for (var stackIndex = 0; stackIndex < stack.length; stackIndex++) {
+        final productId = stack[stackIndex];
         items.add(
           SortingItem(
             productId: productId,
             asset: products[productId],
-            stackIndex: 0,
-            shelfIndex: group % shelfCount,
+            stackIndex: stackIndex,
+            shelfIndex: shelfIndex,
           ),
         );
       }
     }
 
-    _shuffleWithComplexity(items, random, complexity);
-
-    final distributed = <SortingItem>[];
-    final stackCounts = List<int>.filled(shelfCount, 0);
-    for (final item in items) {
-      var shelf = random.nextInt(shelfCount);
-      if (complexity > .45 && random.nextDouble() < complexity) {
-        shelf = (shelf + random.nextInt(shelfCount)) % shelfCount;
+    // Shuffle the product order inside stacks only for harder levels, but keep
+    // stack positions fixed so the game always has a deterministic board.
+    if (complexity > .25) {
+      for (final stack in shelves) {
+        if (stack.length > 2) {
+          for (var i = stack.length - 1; i > 0; i--) {
+            final j = random.nextInt(i + 1);
+            final value = stack[i];
+            stack[i] = stack[j];
+            stack[j] = value;
+          }
+        }
       }
-      final stackIndex = stackCounts[shelf] % maxStackDepth;
-      stackCounts[shelf]++;
-      distributed.add(
-        SortingItem(
-          productId: item.productId,
-          asset: item.asset,
-          stackIndex: stackIndex,
-          shelfIndex: shelf,
-        ),
-      );
+      items
+        ..clear()
+        ..addAll(_itemsFromShelves(shelves));
     }
 
     return SortingLevel(
@@ -80,16 +92,53 @@ class LevelGenerator {
       maxStackDepth: maxStackDepth,
       emptySlots: emptySlots,
       complexity: complexity,
-      items: List.unmodifiable(distributed),
+      items: List.unmodifiable(items),
     );
+  }
+
+  static List<SortingItem> _itemsFromShelves(List<List<int>> shelves) {
+    final result = <SortingItem>[];
+    for (var shelfIndex = 0; shelfIndex < shelves.length; shelfIndex++) {
+      for (var stackIndex = 0; stackIndex < shelves[shelfIndex].length; stackIndex++) {
+        final productId = shelves[shelfIndex][stackIndex];
+        result.add(
+          SortingItem(
+            productId: productId,
+            asset: products[productId],
+            stackIndex: stackIndex,
+            shelfIndex: shelfIndex,
+          ),
+        );
+      }
+    }
+    return result;
+  }
+
+  static int _findShelfWithSpace(List<List<int>> shelves, int maxDepth, Random random) {
+    final candidates = <int>[];
+    for (var i = 0; i < shelves.length; i++) {
+      if (shelves[i].length < maxDepth) candidates.add(i);
+    }
+    if (candidates.isEmpty) {
+      // This fallback is only reached on very small early levels.
+      return random.nextInt(shelves.length);
+    }
+    return candidates[random.nextInt(candidates.length)];
+  }
+
+  static void _rebalance(List<List<int>> shelves, int maxDepth, Random random) {
+    var guard = 0;
+    while (shelves.any((stack) => stack.length > maxDepth) && guard++ < 1000) {
+      final source = shelves.indexWhere((stack) => stack.length > maxDepth);
+      final value = shelves[source].removeLast();
+      final target = _findShelfWithSpace(shelves, maxDepth, random);
+      shelves[target].add(value);
+    }
   }
 
   static double _smooth(double value) => value * value * (3 - 2 * value);
 
   static int _itemTypes(int level) {
-    // The repository currently contains seven distinct product assets.
-    // New product assets can be added later and this progression can then
-    // continue beyond seven without changing the generation architecture.
     if (level <= 10) return 3;
     if (level <= 40) return 4;
     if (level <= 100) return 5;
@@ -98,40 +147,39 @@ class LevelGenerator {
   }
 
   static int _shelfCount(int level) {
-    if (level <= 30) return 2;
-    if (level <= 100) return 3;
-    if (level <= 250) return 4;
-    if (level <= 450) return 5;
-    if (level <= 700) return 6;
-    if (level <= 950) return 7;
-    if (level <= 1200) return 8;
-    if (level <= 1500) return 9;
-    if (level <= 1800) return 10;
-    if (level <= 2100) return 11;
-    if (level <= 2350) return 12;
-    return 13;
+    if (level <= 30) return 3;
+    if (level <= 100) return 4;
+    if (level <= 250) return 5;
+    if (level <= 450) return 6;
+    if (level <= 700) return 7;
+    if (level <= 950) return 8;
+    if (level <= 1200) return 9;
+    if (level <= 1500) return 10;
+    if (level <= 1800) return 11;
+    if (level <= 2100) return 12;
+    if (level <= 2350) return 13;
+    return 14;
   }
 
   static int _stackDepth(int level) {
-    if (level <= 20) return 1;
-    if (level <= 75) return 2;
-    if (level <= 200) return 3;
-    if (level <= 400) return 4;
-    if (level <= 650) return 5;
-    if (level <= 900) return 6;
-    if (level <= 1200) return 7;
-    if (level <= 1500) return 8;
-    if (level <= 1800) return 9;
-    if (level <= 2100) return 10;
-    if (level <= 2350) return 11;
-    return 12;
+    if (level <= 20) return 3;
+    if (level <= 75) return 4;
+    if (level <= 200) return 5;
+    if (level <= 400) return 6;
+    if (level <= 650) return 7;
+    if (level <= 900) return 8;
+    if (level <= 1200) return 9;
+    if (level <= 1500) return 10;
+    if (level <= 1800) return 11;
+    if (level <= 2100) return 12;
+    if (level <= 2350) return 13;
+    return 14;
   }
 
   static int _emptySlots(int level) {
-    if (level <= 100) return 4;
-    if (level <= 400) return 3;
-    if (level <= 1400) return 2;
-    if (level <= 1800) return 1 + (level % 4 == 0 ? 1 : 0);
+    if (level <= 100) return 2;
+    if (level <= 400) return 2;
+    if (level <= 1400) return 1;
     return 1;
   }
 
@@ -152,27 +200,5 @@ class LevelGenerator {
         ? random.nextInt(itemTypes)
         : (random.nextInt(itemTypes) + group * 2) % itemTypes;
     return (base + offset) % itemTypes;
-  }
-
-  static void _shuffleWithComplexity(
-    List<SortingItem> items,
-    Random random,
-    double complexity,
-  ) {
-    for (var i = items.length - 1; i > 0; i--) {
-      final j = random.nextInt(i + 1);
-      final temp = items[i];
-      items[i] = items[j];
-      items[j] = temp;
-    }
-
-    if (complexity > .35) {
-      for (var i = items.length - 1; i > 0; i--) {
-        final j = random.nextInt(i + 1);
-        final temp = items[i];
-        items[i] = items[j];
-        items[j] = temp;
-      }
-    }
   }
 }
