@@ -132,9 +132,58 @@ class _Product extends StatelessWidget {
 
 class _LevelCard extends StatelessWidget {
   const _LevelCard({required this.level, required this.completed, required this.onPlay});
-  final int level; final bool completed; final VoidCallback onPlay;
+  final int level;
+  final bool completed;
+  final VoidCallback onPlay;
+
   @override
-  Widget build(BuildContext context) => Container(padding: const EdgeInsets.fromLTRB(18, 14, 18, 16), decoration: BoxDecoration(color: Colors.white.withValues(alpha: .96), borderRadius: BorderRadius.circular(24), boxShadow: const [BoxShadow(blurRadius: 12, offset: Offset(0, 6), color: Color(0x44000000))]), child: Column(children: [Text(completed ? 'LEVEL $level COMPLETED' : 'CURRENT LEVEL $level', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: 1.2, color: Color(0xFF6C431F))), const SizedBox(height: 8), ClipRRect(borderRadius: BorderRadius.circular(20), child: LinearProgressIndicator(minHeight: 9, value: completed ? 1 : 0, backgroundColor: const Color(0xFFEBD8BC), valueColor: const AlwaysStoppedAnimation(Color(0xFFFFB52E)))), const SizedBox(height: 12), SizedBox(width: double.infinity, height: 54, child: ElevatedButton.icon(onPressed: onPlay, icon: const Icon(Icons.play_arrow_rounded), label: Text(completed ? 'PLAY AGAIN' : 'PLAY', style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900, letterSpacing: 1.5)), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFFA914), foregroundColor: Colors.white, elevation: 4, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18))))]));
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 14, 18, 16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: .96),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: const [BoxShadow(blurRadius: 12, offset: Offset(0, 6), color: Color(0x44000000))],
+      ),
+      child: Column(
+        children: [
+          Text(
+            completed ? 'LEVEL $level COMPLETED' : 'CURRENT LEVEL $level',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: 1.2, color: Color(0xFF6C431F)),
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: LinearProgressIndicator(
+              minHeight: 9,
+              value: completed ? 1 : 0,
+              backgroundColor: const Color(0xFFEBD8BC),
+              valueColor: const AlwaysStoppedAnimation(Color(0xFFFFB52E)),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 54,
+            child: ElevatedButton.icon(
+              onPressed: onPlay,
+              icon: const Icon(Icons.play_arrow_rounded),
+              label: Text(
+                completed ? 'PLAY AGAIN' : 'PLAY',
+                style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900, letterSpacing: 1.5),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFFA914),
+                foregroundColor: Colors.white,
+                elevation: 4,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _BottomNavigation extends StatelessWidget {
