@@ -67,7 +67,6 @@ class LevelRepository {
         for (final shelf in selectedShelves) {
           shelves[shelf].add(
             _Placed(
-              itemId: shelves[shelf].length,
               productId: product,
               layer: layer,
             ),
@@ -86,7 +85,8 @@ class LevelRepository {
       for (final placed in shelves[shelfIndex]) {
         items.add(
           SortingItem(
-            itemId: level * 100000 + placed.itemId * 100 + shelfIndex,
+            // Layer + shelf uniquely identifies every authored board item.
+            itemId: level * 100000 + placed.layer * 100 + shelfIndex,
             productId: placed.productId,
             asset: _productAssets[placed.productId],
             stackIndex: placed.layer,
@@ -166,9 +166,8 @@ class LevelRepository {
 }
 
 class _Placed {
-  const _Placed({required this.itemId, required this.productId, required this.layer});
+  const _Placed({required this.productId, required this.layer});
 
-  final int itemId;
   final int productId;
   final int layer;
 }
