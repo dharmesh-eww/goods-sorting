@@ -17,24 +17,21 @@ class LevelGenerator {
   static SortingLevel generate(int level) {
     if (level < 1) throw ArgumentError.value(level, 'level', 'Must be >= 1');
 
-    final difficulty = ((level - 1) / 2499.0).clamp(0.0, 1.0);
-    final curved = _smooth(difficulty);
+    final progress = ((level - 1) / 2499.0).clamp(0.0, 1.0);
+    final difficulty = _smooth(progress);
     final random = Random(level * 7919 + 104729);
-
     final itemTypes = _itemTypes(level);
     final shelfCount = _shelfCount(level);
     final maxStackDepth = _stackDepth(level);
     final emptySlots = _emptySlots(level);
-    final complexity = _complexity(level, curved);
+    final complexity = _complexity(level, difficulty);
     final totalSlots = shelfCount * 3;
     final usableSlots = max(3, totalSlots - emptySlots);
-
-    // Every product is generated in complete triples. This preserves the
-    // fundamental triple-match rule while still allowing the board order to
-    // become increasingly difficult.
     final groups = max(1, usableSlots ~/ 3);
     final items = <SortingItem>[];
 
+    // Each product is created in a complete triple. The shuffle and shelf
+    // distribution make the triples progressively harder to discover.
     for (var group = 0; group < groups; group++) {
       final productId = _productForGroup(
         group,
@@ -77,7 +74,7 @@ class LevelGenerator {
 
     return SortingLevel(
       levelNumber: level,
-      difficulty: difficulty,
+      difficulty: progress,
       itemTypes: itemTypes,
       shelfCount: shelfCount,
       maxStackDepth: maxStackDepth,
@@ -87,25 +84,17 @@ class LevelGenerator {
     );
   }
 
-  static double _smooth(double value) {
-    return value * value * (3 - 2 * value);
-  }
+  static double _smooth(double value) => value * value * (3 - 2 * value);
 
   static int _itemTypes(int level) {
+    // The repository currently contains seven distinct product assets.
+    // New product assets can be added later and this progression can then
+    // continue beyond seven without changing the generation architecture.
     if (level <= 10) return 3;
     if (level <= 40) return 4;
     if (level <= 100) return 5;
     if (level <= 200) return 6;
-    if (level <= 350) return 7;
-    if (level <= 550) return 8;
-    if (level <= 800) return 9;
-    if (level <= 1050) return 10;
-    if (level <= 1300) return 11;
-    if (level <= 1550) return 12;
-    if (level <= 1800) return 13;
-    if (level <= 2050) return 14;
-    if (level <= 2300) return 15;
-    return 16;
+    return 7;
   }
 
   static int _shelfCount(int level) {
@@ -147,8 +136,6 @@ class LevelGenerator {
   }
 
   static double _complexity(int level, double curved) {
-    // Small deterministic waves prevent consecutive levels from looking like
-    // simple copies while the overall difficulty still moves upward.
     final wave = sin(level * .37) * .035 + sin(level * .11) * .02;
     return (curved + wave).clamp(0.0, 1.0);
   }
@@ -160,7 +147,6 @@ class LevelGenerator {
     double complexity,
   ) {
     if (complexity < .18) return group % itemTypes;
-
     final base = group % itemTypes;
     final offset = complexity < .45
         ? random.nextInt(itemTypes)
@@ -173,9 +159,6 @@ class LevelGenerator {
     Random random,
     double complexity,
   ) {
-    // Fisher-Yates is deterministic because the generator owns the seed.
-    // More complex levels receive a second shuffle pass, spreading triples
-    // farther apart and making the visible arrangement less predictable.
     for (var i = items.length - 1; i > 0; i--) {
       final j = random.nextInt(i + 1);
       final temp = items[i];
