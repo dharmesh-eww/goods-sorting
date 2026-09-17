@@ -86,15 +86,65 @@ class _Journey extends StatelessWidget {
 class _LevelTile extends StatelessWidget {
   const _LevelTile({required this.number, required this.unlocked, required this.completed, required this.current, required this.selected, required this.difficulty, required this.progress, this.onTap, this.onPlay});
   final int number; final bool unlocked, completed, current, selected; final String difficulty; final double progress; final VoidCallback? onTap, onPlay;
+
   @override
-  Widget build(BuildContext context) => GestureDetector(onTap: onTap, child: AnimatedContainer(duration: const Duration(milliseconds: 180), padding: const EdgeInsets.all(12), decoration: BoxDecoration(gradient: LinearGradient(colors: unlocked ? const [Color(0xFFFFFCF2), Color(0xFFFFE4AB)] : const [Color(0xFFE5D0B0), Color(0xFFD1B38B)]), borderRadius: BorderRadius.circular(23), border: Border.all(color: current ? const Color(0xFFFF8C00) : selected ? const Color(0xFFFFB52E) : Colors.white.withValues(alpha: .75), width: current ? 3 : 2), boxShadow: [BoxShadow(color: const Color(0x50000000), blurRadius: current ? 13 : 8, offset: const Offset(0, 6))]), child: Row(children: [_Badge(number: number, unlocked: unlocked, completed: completed), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Row(children: [Expanded(child: Text(current ? 'CURRENT • Level $number' : '$difficulty • Level $number', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: unlocked ? const Color(0xFF633E20) : const Color(0xFF806B54)))), if (completed) const Icon(Icons.check_circle_rounded, color: Color(0xFF55A34A), size: 21) else if (!unlocked) const Icon(Icons.lock_rounded, color: Color(0xFF8D765D), size: 20) else if (current) const Icon(Icons.play_circle_fill_rounded, color: Color(0xFFFF9715), size: 22)]), const SizedBox(height: 7), ClipRRect(borderRadius: BorderRadius.circular(10), child: LinearProgressIndicator(minHeight: 8, value: progress, backgroundColor: const Color(0xFFD8C09D), valueColor: const AlwaysStoppedAnimation(Color(0xFFFFA914)))), const SizedBox(height: 5), Text(completed ? 'Completed' : current ? 'Play this level now' : unlocked ? 'Unlocked' : 'Complete previous level', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF98724C)))])), const SizedBox(width: 9), _Play(enabled: unlocked, onTap: onPlay)]));
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(colors: unlocked ? const [Color(0xFFFFFCF2), Color(0xFFFFE4AB)] : const [Color(0xFFE5D0B0), Color(0xFFD1B38B)]),
+          borderRadius: BorderRadius.circular(23),
+          border: Border.all(color: current ? const Color(0xFFFF8C00) : selected ? const Color(0xFFFFB52E) : Colors.white.withValues(alpha: .75), width: current ? 3 : 2),
+          boxShadow: [BoxShadow(color: const Color(0x50000000), blurRadius: current ? 13 : 8, offset: const Offset(0, 6))],
+        ),
+        child: Row(
+          children: [
+            _Badge(number: number, unlocked: unlocked, completed: completed),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(child: Text(current ? 'CURRENT • Level $number' : '$difficulty • Level $number', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: unlocked ? const Color(0xFF633E20) : const Color(0xFF806B54)))),
+                      if (completed) const Icon(Icons.check_circle_rounded, color: Color(0xFF55A34A), size: 21)
+                      else if (!unlocked) const Icon(Icons.lock_rounded, color: Color(0xFF8D765D), size: 20)
+                      else if (current) const Icon(Icons.play_circle_fill_rounded, color: Color(0xFFFF9715), size: 22),
+                    ],
+                  ),
+                  const SizedBox(height: 7),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: LinearProgressIndicator(
+                      minHeight: 8,
+                      value: progress,
+                      backgroundColor: const Color(0xFFD8C09D),
+                      valueColor: const AlwaysStoppedAnimation(Color(0xFFFFA914)),
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(completed ? 'Completed' : current ? 'Play this level now' : unlocked ? 'Unlocked' : 'Complete previous level', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF98724C))),
+                ],
+              ),
+            ),
+            const SizedBox(width: 9),
+            _Play(enabled: unlocked, onTap: onPlay),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _Badge extends StatelessWidget {
   const _Badge({required this.number, required this.unlocked, required this.completed});
   final int number; final bool unlocked, completed;
   @override
-  Widget build(BuildContext context) => Container(width: 62, height: 70, decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: unlocked ? const [Color(0xFFFFCA4C), Color(0xFFF18A11)] : const [Color(0xFFB8A38A), Color(0xFF8D775E)]), borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white, width: 2), boxShadow: const [BoxShadow(color: Color(0x50000000), blurRadius: 5, offset: Offset(0, 4))]), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(completed ? Icons.check_rounded : unlocked ? Icons.shopping_basket_rounded : Icons.lock_rounded, color: Colors.white, size: 21), Text('$number', style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w900, color: Colors.white, height: 1))]));
+  Widget build(BuildContext context) => Container(width: 62, height: 70, decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: unlocked ? const [Color(0xFFFFCA4C), Color(0xFFF18A11)] : const [Color(0xFFB8A38A), Color(0xFF8D775E)]), borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white, width: 2), boxShadow: const [BoxShadow(color: Color(0x50000000), blurRadius: 5, offset: Offset(0, 4))]), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(completed ? Icons.check_rounded : unlocked ? Icons.shopping_basket_rounded : Icons.lock_rounded, color: Colors.white, size: 21), Text('$number', style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w900, color: Colors.white, height: 1)]));
 }
 
 class _Play extends StatelessWidget {
