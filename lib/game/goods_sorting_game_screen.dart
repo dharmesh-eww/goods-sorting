@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import 'level_data.dart';
 import 'level_generator.dart';
+import 'sorting_item.dart';
 
 class GoodsSortingGameScreen extends StatefulWidget {
   const GoodsSortingGameScreen({super.key, required this.levelNumber});
@@ -25,9 +26,10 @@ class _GoodsSortingGameScreenState extends State<GoodsSortingGameScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final shelves = List.generate(level.shelfCount, (index) {
-      return level.items.where((item) => item.shelfIndex == index).toList();
-    });
+    final shelves = List.generate(
+      level.shelfCount,
+      (index) => level.items.where((item) => item.shelfIndex == index).toList(),
+    );
 
     return Scaffold(
       body: Container(
@@ -47,13 +49,11 @@ class _GoodsSortingGameScreenState extends State<GoodsSortingGameScreen> {
                   physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                   itemCount: shelves.length,
-                  itemBuilder: (context, index) {
-                    return _Shelf(
-                      items: shelves[index],
-                      shelfNumber: index + 1,
-                      onItemTap: _selectItem,
-                    );
-                  },
+                  itemBuilder: (context, index) => _Shelf(
+                    items: shelves[index],
+                    shelfNumber: index + 1,
+                    onItemTap: _selectItem,
+                  ),
                 ),
               ),
               _GameFooter(
@@ -133,18 +133,14 @@ class _Shelf extends StatelessWidget {
     required this.onItemTap,
   });
 
-  final List items;
+  final List<SortingItem> items;
   final int shelfNumber;
   final ValueChanged<int> onItemTap;
 
   @override
   Widget build(BuildContext context) {
-    final maxDepth = items.isEmpty
-        ? 1
-        : items.map((item) => item.stackIndex as int).fold(0, max) + 1;
-
     return Container(
-      height: 106,
+      height: 112,
       margin: const EdgeInsets.only(bottom: 13),
       padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
       decoration: BoxDecoration(
@@ -163,11 +159,11 @@ class _Shelf extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
+          SizedBox(
             width: 30,
-            alignment: Alignment.center,
             child: Text(
               '$shelfNumber',
+              textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w900,
@@ -175,56 +171,66 @@ class _Shelf extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(width: 5),
           Expanded(
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 5,
-                  child: Container(
-                    height: 9,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFB87532),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-                ...items.map((item) {
-                  final left = (item.productId * 71.0) % 230.0;
-                  final depth = item.stackIndex as int;
-                  final safeDepth = depth % maxDepth;
-                  return Positioned(
-                    left: left,
-                    bottom: 12 + safeDepth * 7.0,
-                    child: GestureDetector(
-                      onTap: () => onItemTap(item.productId as int),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final itemWidth = 58.0;
+                final columns = max(
+                  1,
+                  (constraints.maxWidth / itemWidth).floor(),
+                );
+                return Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 5,
                       child: Container(
-                        width: 58,
-                        height: 58,
-                        padding: const EdgeInsets.all(7),
+                        height: 9,
                         decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(15),
-                          border: Border.all(
-                            color: const Color(0xFFFFC24A),
-                            width: 2,
-                          ),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x30000000),
-                              blurRadius: 5,
-                              offset: Offset(0, 3),
-                            ),
-                          ],
+                          color: const Color(0xFFB87532),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        child: SvgPicture.asset(item.asset as String),
                       ),
                     ),
-                  );
-                }),
-              ],
+                    ...items.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final item = entry.value;
+                      final column = index % columns;
+                      return Positioned(
+                        left: column * itemWidth,
+                        bottom: 12 + item.stackIndex * 7.0,
+                        child: GestureDetector(
+                          onTap: () => onItemTap(item.productId),
+                          child: Container(
+                            width: 54,
+                            height: 54,
+                            padding: const EdgeInsets.all(7),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(15),
+                              border: Border.all(
+                                color: const Color(0xFFFFC24A),
+                                width: 2,
+                              ),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x30000000),
+                                  blurRadius: 5,
+                                  offset: Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: SvgPicture.asset(item.asset),
+                          ),
+                        ),
+                      );
+                    }),
+                  ],
+                );
+              },
             ),
           ),
         ],
@@ -261,10 +267,7 @@ class _GameFooter extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  const Icon(
-                    Icons.inventory_2_rounded,
-                    color: Color(0xFFF19A16),
-                  ),
+                  const Icon(Icons.inventory_2_rounded, color: Color(0xFFF19A16)),
                   const SizedBox(width: 8),
                   Text(
                     '$selectedCount selected',
@@ -361,3 +364,5 @@ String _difficultyName(double value) {
   if (value < .92) return 'EXPERT';
   return 'MASTER';
 }
+
+int max(int a, int b) => a > b ? a : b;
