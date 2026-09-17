@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import 'game/goods_sorting_game_screen.dart';
+import 'game/level_generator.dart';
+
 class LevelSelectionScreen extends StatefulWidget {
   const LevelSelectionScreen({super.key});
 
@@ -12,17 +15,8 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController controller;
   int selected = 1;
-
-  final levels = const [
-    _Level(1, 'Fresh Start', .92, 3, true),
-    _Level(2, 'Easy Market', .68, 2, true),
-    _Level(3, 'Quick Sort', .42, 1, true),
-    _Level(4, 'Busy Shelf', 0, 0, false),
-    _Level(5, 'Super Store', 0, 0, false),
-    _Level(6, 'Mega Market', 0, 0, false),
-    _Level(7, 'Golden Aisle', 0, 0, false),
-    _Level(8, 'Master Sorter', 0, 0, false),
-  ];
+  static const totalLevels = 2500;
+  static const highestUnlockedLevel = 3;
 
   @override
   void initState() {
@@ -63,14 +57,16 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen>
                 child: ListView.builder(
                   physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(18, 12, 18, 28),
-                  itemCount: levels.length,
+                  itemCount: totalLevels,
                   itemBuilder: (context, index) {
-                    final level = levels[index];
+                    final levelNumber = index + 1;
+                    final level = LevelGenerator.generate(levelNumber);
+                    final unlocked = levelNumber <= highestUnlockedLevel;
                     final animation = CurvedAnimation(
                       parent: controller,
                       curve: Interval(
-                        (index * .07).clamp(0, .5),
-                        ((index * .07) + .45).clamp(.45, 1),
+                        (index * .07).clamp(0.0, .5),
+                        ((index * .07) + .45).clamp(.45, 1.0),
                         curve: Curves.easeOutBack,
                       ),
                     );
@@ -89,13 +85,19 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen>
                       child: Padding(
                         padding: const EdgeInsets.only(bottom: 13),
                         child: _LevelTile(
-                          level: level,
-                          selected: selected == level.number,
-                          onTap: level.unlocked
-                              ? () => setState(() => selected = level.number)
+                          number: levelNumber,
+                          unlocked: unlocked,
+                          selected: selected == levelNumber,
+                          difficulty: _difficultyName(level.difficulty),
+                          progress: levelNumber <= 3
+                              ? const [0.92, 0.68, 0.42][levelNumber - 1]
+                              : 0,
+                          stars: levelNumber <= 3 ? 4 - levelNumber : 0,
+                          onTap: unlocked
+                              ? () => setState(() => selected = levelNumber)
                               : null,
-                          onPlay: level.unlocked
-                              ? () => _play(context, level.number)
+                          onPlay: unlocked
+                              ? () => _play(context, levelNumber)
                               : null,
                         ),
                       ),
@@ -110,16 +112,10 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen>
     );
   }
 
-  void _play(BuildContext context, int level) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-        ),
-        content: Text('Starting Level $level...'),
-        duration: const Duration(milliseconds: 700),
+  void _play(BuildContext context, int levelNumber) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => GoodsSortingGameScreen(levelNumber: levelNumber),
       ),
     );
   }
@@ -136,10 +132,7 @@ class _Header extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 7),
       child: Row(
         children: [
-          _CircleButton(
-            icon: Icons.arrow_back_rounded,
-            onTap: onBack,
-          ),
+          _CircleButton(icon: Icons.arrow_back_rounded, onTap: onBack),
           const SizedBox(width: 12),
           const Expanded(
             child: Text(
@@ -152,15 +145,9 @@ class _Header extends StatelessWidget {
               ),
             ),
           ),
-          _Resource(
-            asset: 'assets/images/products/apple.svg',
-            value: '1,250',
-          ),
+          _Resource(asset: 'assets/images/products/apple.svg', value: '1,250'),
           const SizedBox(width: 7),
-          _Resource(
-            icon: Icons.favorite_rounded,
-            value: '5',
-          ),
+          _Resource(icon: Icons.favorite_rounded, value: '5'),
         ],
       ),
     );
@@ -179,10 +166,7 @@ class _Journey extends StatelessWidget {
       builder: (_, child) {
         return Transform.scale(
           scale: .95 + .05 * controller.value,
-          child: Opacity(
-            opacity: controller.value,
-            child: child,
-          ),
+          child: Opacity(opacity: controller.value, child: child),
         );
       },
       child: Container(
@@ -213,9 +197,7 @@ class _Journey extends StatelessWidget {
                 borderRadius: BorderRadius.circular(17),
                 border: Border.all(color: Colors.white, width: 2),
               ),
-              child: SvgPicture.asset(
-                'assets/images/products/apple.svg',
-              ),
+              child: SvgPicture.asset('assets/images/products/apple.svg'),
             ),
             const SizedBox(width: 12),
             const Expanded(
@@ -233,7 +215,7 @@ class _Journey extends StatelessWidget {
                   ),
                   SizedBox(height: 3),
                   Text(
-                    'Sort your way to the top!',
+                    '2,500 levels • Easy to Master',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w900,
@@ -257,21 +239,27 @@ class _Journey extends StatelessWidget {
 
 class _LevelTile extends StatelessWidget {
   const _LevelTile({
-    required this.level,
+    required this.number,
+    required this.unlocked,
     required this.selected,
+    required this.difficulty,
+    required this.progress,
+    required this.stars,
     this.onTap,
     this.onPlay,
   });
 
-  final _Level level;
+  final int number;
+  final bool unlocked;
   final bool selected;
+  final String difficulty;
+  final double progress;
+  final int stars;
   final VoidCallback? onTap;
   final VoidCallback? onPlay;
 
   @override
   Widget build(BuildContext c) {
-    final active = level.unlocked;
-
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -279,7 +267,7 @@ class _LevelTile extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: active
+            colors: unlocked
                 ? const [Color(0xFFFFFCF2), Color(0xFFFFE4AB)]
                 : const [Color(0xFFE5D0B0), Color(0xFFD1B38B)],
           ),
@@ -300,7 +288,7 @@ class _LevelTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            _Badge(level: level),
+            _Badge(number: number, unlocked: unlocked),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -310,18 +298,18 @@ class _LevelTile extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          level.title,
+                          '$difficulty • Level $number',
                           style: TextStyle(
-                            fontSize: 17,
+                            fontSize: 16,
                             fontWeight: FontWeight.w900,
-                            color: active
+                            color: unlocked
                                 ? const Color(0xFF633E20)
                                 : const Color(0xFF806B54),
                           ),
                         ),
                       ),
-                      active
-                          ? _Stars(count: level.stars)
+                      unlocked
+                          ? _Stars(count: stars)
                           : const Icon(
                               Icons.lock_rounded,
                               color: Color(0xFF8D765D),
@@ -334,19 +322,17 @@ class _LevelTile extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                     child: LinearProgressIndicator(
                       minHeight: 8,
-                      value: level.progress,
+                      value: progress,
                       backgroundColor: const Color(0xFFD8C09D),
-                      valueColor: AlwaysStoppedAnimation(
-                        active
-                            ? const Color(0xFFFFA914)
-                            : const Color(0xFFAA957A),
+                      valueColor: const AlwaysStoppedAnimation(
+                        Color(0xFFFFA914),
                       ),
                     ),
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    active
-                        ? '${(level.progress * 100).round()}% complete'
+                    unlocked
+                        ? '${(progress * 100).round()}% complete'
                         : 'Complete previous level',
                     style: const TextStyle(
                       fontSize: 11,
@@ -358,10 +344,7 @@ class _LevelTile extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 9),
-            _Play(
-              enabled: active,
-              onTap: onPlay,
-            ),
+            _Play(enabled: unlocked, onTap: onPlay),
           ],
         ),
       ),
@@ -370,9 +353,10 @@ class _LevelTile extends StatelessWidget {
 }
 
 class _Badge extends StatelessWidget {
-  const _Badge({required this.level});
+  const _Badge({required this.number, required this.unlocked});
 
-  final _Level level;
+  final int number;
+  final bool unlocked;
 
   @override
   Widget build(BuildContext c) {
@@ -383,7 +367,7 @@ class _Badge extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: level.unlocked
+          colors: unlocked
               ? const [Color(0xFFFFCA4C), Color(0xFFF18A11)]
               : const [Color(0xFFB8A38A), Color(0xFF8D775E)],
         ),
@@ -401,14 +385,14 @@ class _Badge extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            level.unlocked
+            unlocked
                 ? Icons.shopping_basket_rounded
                 : Icons.lock_rounded,
             color: Colors.white,
             size: 21,
           ),
           Text(
-            '${level.number}',
+            '$number',
             style: const TextStyle(
               fontSize: 23,
               fontWeight: FontWeight.w900,
@@ -438,9 +422,7 @@ class _PlayState extends State<_Play> {
   @override
   Widget build(BuildContext c) {
     return GestureDetector(
-      onTapDown: widget.enabled
-          ? (_) => setState(() => down = true)
-          : null,
+      onTapDown: widget.enabled ? (_) => setState(() => down = true) : null,
       onTapUp: widget.enabled
           ? (_) {
               setState(() => down = false);
@@ -525,11 +507,7 @@ class _CircleButton extends StatelessWidget {
         child: SizedBox(
           width: 45,
           height: 45,
-          child: Icon(
-            icon,
-            color: const Color(0xFF633E20),
-            size: 24,
-          ),
+          child: Icon(icon, color: const Color(0xFF633E20), size: 24),
         ),
       ),
     );
@@ -561,18 +539,19 @@ class _Resource extends StatelessWidget {
       ),
       child: Row(
         children: [
-          asset != null
-              ? SvgPicture.asset(asset!, width: 23, height: 27)
-              : Icon(
-                  icon,
-                  color: const Color(0xFFF05D63),
-                  size: 21,
-                ),
-          const SizedBox(width: 4),
+          if (asset != null)
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: SvgPicture.asset(asset!),
+            )
+          else
+            Icon(icon, size: 19, color: const Color(0xFFF05D62)),
+          const SizedBox(width: 5),
           Text(
             value,
             style: const TextStyle(
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: FontWeight.w900,
               color: Color(0xFF633E20),
             ),
@@ -583,18 +562,13 @@ class _Resource extends StatelessWidget {
   }
 }
 
-class _Level {
-  const _Level(
-    this.number,
-    this.title,
-    this.progress,
-    this.stars,
-    this.unlocked,
-  );
-
-  final int number;
-  final String title;
-  final double progress;
-  final int stars;
-  final bool unlocked;
+String _difficultyName(double value) {
+  if (value < .04) return 'VERY EASY';
+  if (value < .15) return 'EASY';
+  if (value < .30) return 'NORMAL';
+  if (value < .48) return 'MEDIUM';
+  if (value < .65) return 'HARD';
+  if (value < .80) return 'ADVANCED';
+  if (value < .92) return 'EXPERT';
+  return 'MASTER';
 }
