@@ -26,31 +26,48 @@ class LevelGenerator {
     final emptySlots = _emptySlots(level);
     final complexity = _complexity(level, difficulty);
 
-    // Keep every level compatible with the product assets that actually exist
-    // in the repository. Every group is a complete match-three set.
-    final totalGroups = max(2, shelfCount + max(0, (shelfCount * 2 - emptySlots) ~/ 3));
-    final items = <SortingItem>[];
+    // Every group is exactly three products. Keep the number of groups below
+    // the physical shelf capacity so every generated board is valid.
+    final capacity = shelfCount * maxStackDepth;
+    final maxGroups = max(1, (capacity - emptySlots).clamp(3, capacity) ~/ 3);
+    final targetGroups = max(2, min(maxGroups, shelfCount + level ~/ 180));
+
     final shelves = List.generate(shelfCount, (_) => <int>[]);
 
-    for (var group = 0; group < totalGroups; group++) {
+    for (var group = 0; group < targetGroups; group++) {
       final productId = _productForGroup(group, itemTypes, random, complexity);
-      final preferredShelf = group % shelfCount;
-      final shelfOrder = List<int>.generate(shelfCount, (index) => (preferredShelf + index) % shelfCount);
-      shelfOrder.shuffle(random);
+      final copies = List<int>.filled(3, productId);
 
-      for (var copy = 0; copy < 3; copy++) {
-        var shelf = shelfOrder[(copy + group) % shelfOrder.length];
-        if (shelves[shelf].length >= maxStackDepth) {
-          shelf = _findShelfWithSpace(shelves, maxStackDepth, random);
+      // Spread a triple across different shelves when the level is easy and
+      // increasingly cluster it on deeper shelves as difficulty rises.
+      for (var copy = 0; copy < copies.length; copy++) {
+        final candidates = List<int>.generate(shelfCount, (index) => index)
+          ..shuffle(random);
+        candidates.sort((a, b) => shelves[a].length.compareTo(shelves[b].length));
+
+        var shelf = candidates.first;
+        if (complexity > .35 && random.nextDouble() < complexity) {
+          final window = min(candidates.length, max(1, 2 + (complexity * shelfCount).floor()));
+          shelf = candidates[random.nextInt(window)];
         }
+
         shelves[shelf].add(productId);
       }
     }
 
-    // Prevent a level from being generated with an overfull shelf. Rebalance
-    // deterministically while retaining every complete triple.
-    _rebalance(shelves, maxStackDepth, random);
+    // Harder boards get more irregular ordering inside each stack.
+    if (complexity > .25) {
+      for (final stack in shelves) {
+        for (var i = stack.length - 1; i > 0; i--) {
+          final j = random.nextInt(i + 1);
+          final value = stack[i];
+          stack[i] = stack[j];
+          stack[j] = value;
+        }
+      }
+    }
 
+    final items = <SortingItem>[];
     for (var shelfIndex = 0; shelfIndex < shelves.length; shelfIndex++) {
       final stack = shelves[shelfIndex];
       for (var stackIndex = 0; stackIndex < stack.length; stackIndex++) {
@@ -66,24 +83,6 @@ class LevelGenerator {
       }
     }
 
-    // Shuffle the product order inside stacks only for harder levels, but keep
-    // stack positions fixed so the game always has a deterministic board.
-    if (complexity > .25) {
-      for (final stack in shelves) {
-        if (stack.length > 2) {
-          for (var i = stack.length - 1; i > 0; i--) {
-            final j = random.nextInt(i + 1);
-            final value = stack[i];
-            stack[i] = stack[j];
-            stack[j] = value;
-          }
-        }
-      }
-      items
-        ..clear()
-        ..addAll(_itemsFromShelves(shelves));
-    }
-
     return SortingLevel(
       levelNumber: level,
       difficulty: progress,
@@ -94,46 +93,6 @@ class LevelGenerator {
       complexity: complexity,
       items: List.unmodifiable(items),
     );
-  }
-
-  static List<SortingItem> _itemsFromShelves(List<List<int>> shelves) {
-    final result = <SortingItem>[];
-    for (var shelfIndex = 0; shelfIndex < shelves.length; shelfIndex++) {
-      for (var stackIndex = 0; stackIndex < shelves[shelfIndex].length; stackIndex++) {
-        final productId = shelves[shelfIndex][stackIndex];
-        result.add(
-          SortingItem(
-            productId: productId,
-            asset: products[productId],
-            stackIndex: stackIndex,
-            shelfIndex: shelfIndex,
-          ),
-        );
-      }
-    }
-    return result;
-  }
-
-  static int _findShelfWithSpace(List<List<int>> shelves, int maxDepth, Random random) {
-    final candidates = <int>[];
-    for (var i = 0; i < shelves.length; i++) {
-      if (shelves[i].length < maxDepth) candidates.add(i);
-    }
-    if (candidates.isEmpty) {
-      // This fallback is only reached on very small early levels.
-      return random.nextInt(shelves.length);
-    }
-    return candidates[random.nextInt(candidates.length)];
-  }
-
-  static void _rebalance(List<List<int>> shelves, int maxDepth, Random random) {
-    var guard = 0;
-    while (shelves.any((stack) => stack.length > maxDepth) && guard++ < 1000) {
-      final source = shelves.indexWhere((stack) => stack.length > maxDepth);
-      final value = shelves[source].removeLast();
-      final target = _findShelfWithSpace(shelves, maxDepth, random);
-      shelves[target].add(value);
-    }
   }
 
   static double _smooth(double value) => value * value * (3 - 2 * value);
