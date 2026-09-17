@@ -2,7 +2,6 @@ import 'dart:math';
 
 import 'level_data.dart';
 import 'sorting_item.dart';
-import 'level_progress.dart';
 
 class LevelGenerator {
   static const products = <String>[
@@ -17,12 +16,6 @@ class LevelGenerator {
 
   static SortingLevel generate(int level) {
     if (level < 1) throw ArgumentError.value(level, 'level', 'Must be >= 1');
-
-    // The game transitions directly from a completed level to the next level.
-    // Sync the previous level here so the persisted progress is already updated
-    // when the player reaches the next board.
-    _syncProgressForNextLevel(level);
-
     final progress = ((level - 1) / 2499.0).clamp(0.0, 1.0);
     final difficulty = _smooth(progress);
     final random = Random(104729 + level * 7919);
@@ -95,16 +88,6 @@ class LevelGenerator {
       complexity: complexity,
       items: List.unmodifiable(items),
     );
-  }
-
-  static void _syncProgressForNextLevel(int level) {
-    final progress = LevelProgress.instance;
-    if (level == progress.highestUnlockedLevel + 1 &&
-        level <= LevelProgress.maxLevel) {
-      // Fire-and-forget persistence is intentional here because level
-      // generation is synchronous and must not block the first frame.
-      progress.markCompleted(level - 1);
-    }
   }
 
   static double _smooth(double value) => value * value * (3 - 2 * value);
