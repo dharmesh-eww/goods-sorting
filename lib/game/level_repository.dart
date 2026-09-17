@@ -5,9 +5,9 @@ import 'sorting_item.dart';
 
 /// Flutter equivalent of the Unity project's LevelData + LevelDataHolder.
 ///
-/// Level definitions stay separate from progression. Each board is
-/// deterministic and is constructed from a valid reverse-play sequence, so
-/// generated levels remain solvable instead of being arbitrary random boards.
+/// Level definitions stay separate from progression. Each board is generated
+/// deterministically and in matching layers, so there is always at least one
+/// complete triple available until every item has been cleared.
 class LevelRepository {
   LevelRepository._();
 
@@ -39,55 +39,57 @@ class LevelRepository {
       _groupCount(level, shelfCount),
     );
 
-    final productIds = List<int>.generate(groups, (index) => index % itemTypes);
-    productIds.shuffle(random);
-
-    // Each matching group is emitted once per round. This deliberately
-    // spreads the three copies through the board instead of creating AAA
-    // stacks, while retaining a guaranteed solution sequence.
-    final playOrder = <int>[];
-    for (var round = 0; round < 3; round++) {
-      for (final product in productIds) {
-        playOrder.add(product);
-      }
-    }
+    final products = List<int>.generate(
+      groups,
+      (index) => index % itemTypes,
+    )..shuffle(random);
 
     final shelves = List.generate(shelfCount, (_) => <_Placed>[]);
-    final shelfOrder = List<int>.generate(shelfCount, (index) => index);
+    final shelfIndices = List<int>.generate(shelfCount, (index) => index);
 
-    // Store the inverse of the valid play sequence: the first playable item
-    // sits on top and later moves sit underneath it.
-    for (var index = 0; index < playOrder.length; index++) {
-      shelfOrder.shuffle(random);
-      var placed = false;
+    // A layer contains one or two complete triples on different shelves.
+    // Removing the top layer exposes the next one, which gives every board a
+    // deterministic solution while still allowing the shelf layout to vary.
+    var groupIndex = 0;
+    var layer = 0;
+    while (groupIndex < products.length) {
+      final groupsThisLayer = min(
+        _groupsPerLayer(shelfCount),
+        products.length - groupIndex,
+      );
+      final available = List<int>.from(shelfIndices)..shuffle(random);
 
-      for (var offset = 0; offset < shelfOrder.length; offset++) {
-        final shelf = shelfOrder[(offset + index) % shelfOrder.length];
-        if (shelves[shelf].length < maxStackDepth) {
+      for (var group = 0; group < groupsThisLayer; group++) {
+        final product = products[groupIndex++];
+        final base = group * 3;
+        final selectedShelves = available.sublist(base, base + 3);
+
+        for (final shelf in selectedShelves) {
           shelves[shelf].add(
-            _Placed(itemId: index, productId: playOrder[index]),
+            _Placed(
+              itemId: shelves[shelf].length,
+              productId: product,
+              layer: layer,
+            ),
           );
-          placed = true;
-          break;
         }
       }
 
-      if (!placed) {
+      layer++;
+      if (layer > maxStackDepth) {
         throw StateError('Unable to place generated level $level');
       }
     }
 
     final items = <SortingItem>[];
     for (var shelfIndex = 0; shelfIndex < shelves.length; shelfIndex++) {
-      final shelf = shelves[shelfIndex];
-      for (var orderIndex = 0; orderIndex < shelf.length; orderIndex++) {
-        final placed = shelf[orderIndex];
+      for (final placed in shelves[shelfIndex]) {
         items.add(
           SortingItem(
-            itemId: level * 100000 + placed.itemId,
+            itemId: level * 100000 + placed.itemId * 100 + shelfIndex,
             productId: placed.productId,
             asset: _productAssets[placed.productId],
-            stackIndex: shelf.length - orderIndex - 1,
+            stackIndex: placed.layer,
             shelfIndex: shelfIndex,
           ),
         );
@@ -146,6 +148,8 @@ class LevelRepository {
     return min(shelfCount + 4, base);
   }
 
+  static int _groupsPerLayer(int shelfCount) => shelfCount >= 6 ? 2 : 1;
+
   static int _timerSeconds(int level) {
     // Unity's first level does not start a timer; later level data contains a
     // timer budget. These are the Flutter equivalents of that level data.
@@ -162,8 +166,9 @@ class LevelRepository {
 }
 
 class _Placed {
-  const _Placed({required this.itemId, required this.productId});
+  const _Placed({required this.itemId, required this.productId, required this.layer});
 
   final int itemId;
   final int productId;
+  final int layer;
 }
