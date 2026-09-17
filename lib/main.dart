@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import 'level_selection_screen.dart';
+import 'settings_screen.dart';
 import 'splash_screen.dart';
 
 void main() {
@@ -53,7 +54,15 @@ class HomeScreen extends StatelessWidget {
         child: SafeArea(
           child: Column(
             children: [
-              const _HomeHeader(),
+              _HomeHeader(
+                onSettingsTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const SettingsScreen(),
+                    ),
+                  );
+                },
+              ),
               Expanded(
                 child: Stack(
                   children: [
@@ -85,7 +94,9 @@ class HomeScreen extends StatelessWidget {
 }
 
 class _HomeHeader extends StatelessWidget {
-  const _HomeHeader();
+  const _HomeHeader({required this.onSettingsTap});
+
+  final VoidCallback onSettingsTap;
 
   @override
   Widget build(BuildContext context) {
@@ -102,7 +113,10 @@ class _HomeHeader extends StatelessWidget {
           const SizedBox(width: 8),
           const _CurrencyChip(icon: Icons.favorite_rounded, value: '5'),
           const SizedBox(width: 8),
-          const _RoundButton(icon: Icons.settings_rounded),
+          _RoundButton(
+            icon: Icons.settings_rounded,
+            onTap: onSettingsTap,
+          ),
         ],
       ),
     );
@@ -110,9 +124,10 @@ class _HomeHeader extends StatelessWidget {
 }
 
 class _RoundButton extends StatelessWidget {
-  const _RoundButton({required this.icon});
+  const _RoundButton({required this.icon, this.onTap});
 
   final IconData icon;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -122,7 +137,7 @@ class _RoundButton extends StatelessWidget {
       elevation: 3,
       child: InkWell(
         customBorder: const CircleBorder(),
-        onTap: () {},
+        onTap: onTap,
         child: SizedBox(
           width: 46,
           height: 46,
@@ -189,7 +204,10 @@ class _StoreScene extends StatelessWidget {
             end: Alignment.bottomCenter,
             colors: [Color(0xFFFFF4D5), Color(0xFFFFDFA0)],
           ),
-          border: Border.all(color: Colors.white.withValues(alpha: .8), width: 3),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: .8),
+            width: 3,
+          ),
           boxShadow: const [
             BoxShadow(
               blurRadius: 14,
