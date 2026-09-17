@@ -9,7 +9,7 @@ class SortingLevel {
     required this.maxStackDepth,
     required this.emptySlots,
     required this.complexity,
-    required this.timerSeconds,
+    this.timerSeconds = 0,
     required this.items,
   });
 
