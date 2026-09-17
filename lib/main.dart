@@ -9,8 +9,15 @@ void main() {
   runApp(const GoodsSortingApp());
 }
 
-class GoodsSortingApp extends StatelessWidget {
+class GoodsSortingApp extends StatefulWidget {
   const GoodsSortingApp({super.key});
+
+  @override
+  State<GoodsSortingApp> createState() => _GoodsSortingAppState();
+}
+
+class _GoodsSortingAppState extends State<GoodsSortingApp> {
+  bool _showSplash = true;
 
   @override
   Widget build(BuildContext context) {
@@ -20,15 +27,20 @@ class GoodsSortingApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         fontFamily: 'Arial',
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFFFB72B)),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFFFFB72B),
+        ),
       ),
-      home: SplashScreen(
-        onFinished: () {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const HomeScreen()),
-          );
-        },
-      ),
+      home: _showSplash
+          ? SplashScreen(
+              onFinished: () {
+                if (!mounted) return;
+                setState(() {
+                  _showSplash = false;
+                });
+              },
+            )
+          : const HomeScreen(),
     );
   }
 }
