@@ -53,6 +53,7 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
   bool gameOver = false;
   bool completionSaved = false;
   SortingItem? hint;
+  List<SortingItem>? _runtimeItems;
 
   @override
   void initState() {
@@ -75,25 +76,27 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
     if (mounted) setState(() => coins = GameCurrency.instance.coins);
   }
 
-  List<List<SortingItem>> get shelves => List.generate(
-        level.shelfCount,
-        (shelf) => level.items
-            .where((item) =>
-                item.shelfIndex == shelf && !removed.contains(item))
-            .toList()
-          ..sort((a, b) => a.stackIndex.compareTo(b.stackIndex)),
-      );
+  List<List<SortingItem>> get _runtimeShelves {
+    final source = _runtimeItems ?? level.items;
+    return List.generate(
+      level.shelfCount,
+      (shelf) => source
+          .where((x) => x.shelfIndex == shelf && !removed.contains(x))
+          .toList()
+        ..sort((a, b) => a.stackIndex.compareTo(b.stackIndex)),
+    );
+  }
 
   SortingItem? _top(List<SortingItem> items) => items.isEmpty
       ? null
       : items.reduce((a, b) => a.stackIndex > b.stackIndex ? a : b);
 
-  bool _accessible(SortingItem item) => _top(
-        level.items
-            .where((x) =>
-                x.shelfIndex == item.shelfIndex && !removed.contains(x))
-            .toList(),
-      ) == item;
+  bool _accessible(SortingItem item) {
+    for (final shelf in _runtimeShelves) {
+      if (shelf.any((x) => x == item)) return _top(shelf) == item;
+    }
+    return false;
+  }
 
   void _startTimer() {
     if (level.timerSeconds == 0 || timerStarted || paused || gameOver) return;
@@ -180,8 +183,9 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
       if (coins < 5) _toast('Need 5 coins');
       return;
     }
-    final active = level.items.where((x) => !removed.contains(x)).toList();
-    active.shuffle(math.Random(widget.levelNumber * 37 + moves));
+
+    final active = level.items.where((x) => !removed.contains(x)).toList()
+      ..shuffle(math.Random(widget.levelNumber * 37 + moves));
     final spent = await GameCurrency.instance.spend(5);
     if (!spent || !mounted) return;
 
@@ -189,44 +193,28 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
     for (var i = 0; i < active.length; i++) {
       buckets[i % buckets.length].add(active[i]);
     }
-    final items = <SortingItem>[]
-      ..addAll(level.items.where((x) => removed.contains(x)));
+
+    final items = <SortingItem>[];
     for (var shelf = 0; shelf < buckets.length; shelf++) {
       for (var i = 0; i < buckets[shelf].length; i++) {
         final item = buckets[shelf][i];
-        items.add(SortingItem(
-          itemId: item.itemId,
-          productId: item.productId,
-          asset: item.asset,
-          stackIndex: i,
-          shelfIndex: shelf,
-        ));
+        items.add(
+          SortingItem(
+            itemId: item.itemId,
+            productId: item.productId,
+            asset: item.asset,
+            stackIndex: i,
+            shelfIndex: shelf,
+          ),
+        );
       }
     }
+
     setState(() {
       coins = GameCurrency.instance.coins;
       hint = null;
-      level.items
-        ..clear();
-    });
-    // Level data is immutable, so the shuffle is intentionally implemented
-    // as a visual reorder through a separate runtime layout below.
-    setState(() {
       _runtimeItems = List.unmodifiable(items);
     });
-  }
-
-  List<SortingItem>? _runtimeItems;
-
-  List<List<SortingItem>> get _runtimeShelves {
-    final source = _runtimeItems ?? level.items;
-    return List.generate(
-      level.shelfCount,
-      (shelf) => source
-          .where((x) => x.shelfIndex == shelf && !removed.contains(x))
-          .toList()
-        ..sort((a, b) => a.stackIndex.compareTo(b.stackIndex)),
-    );
   }
 
   Future<void> _hint() async {
@@ -335,11 +323,16 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
   void _toast(String text) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(
-        content: Text(text, style: const TextStyle(fontWeight: FontWeight.w800)),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(milliseconds: 900),
-      ));
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            text,
+            style: const TextStyle(fontWeight: FontWeight.w800),
+          ),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(milliseconds: 900),
+        ),
+      );
   }
 
   @override
@@ -388,14 +381,17 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
                   ),
                 ),
               ),
-              _Tray(items: tray, onTap: (item) {
-                if (paused || gameOver) return;
-                setState(() {
-                  tray.remove(item);
-                  removed.remove(item);
-                  history.remove(item);
-                });
-              }),
+              _Tray(
+                items: tray,
+                onTap: (item) {
+                  if (paused || gameOver) return;
+                  setState(() {
+                    tray.remove(item);
+                    removed.remove(item);
+                    history.remove(item);
+                  });
+                },
+              ),
               _Actions(
                 moves: moves,
                 onUndo: history.isEmpty ? null : _undo,
