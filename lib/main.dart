@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import 'level_selection_screen.dart';
+import 'splash_screen.dart';
+
 void main() {
   runApp(const GoodsSortingApp());
 }
@@ -18,7 +21,13 @@ class GoodsSortingApp extends StatelessWidget {
         fontFamily: 'Arial',
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFFFB72B)),
       ),
-      home: const HomeScreen(),
+      home: SplashScreen(
+        onFinished: () {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const HomeScreen()),
+          );
+        },
+      ),
     );
   }
 }
@@ -58,7 +67,15 @@ class HomeScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              const _BottomNavigation(),
+              _BottomNavigation(
+                onLevelsTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const LevelSelectionScreen(),
+                    ),
+                  );
+                },
+              ),
             ],
           ),
         ),
@@ -78,7 +95,10 @@ class _HomeHeader extends StatelessWidget {
         children: [
           const _RoundButton(icon: Icons.person_rounded),
           const Spacer(),
-          const _CurrencyChip(icon: Icons.monetization_on_rounded, value: '1,250'),
+          const _CurrencyChip(
+            icon: Icons.monetization_on_rounded,
+            value: '1,250',
+          ),
           const SizedBox(width: 8),
           const _CurrencyChip(icon: Icons.favorite_rounded, value: '5'),
           const SizedBox(width: 8),
@@ -127,14 +147,27 @@ class _CurrencyChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: .92),
         borderRadius: BorderRadius.circular(22),
-        boxShadow: const [BoxShadow(blurRadius: 5, offset: Offset(0, 2), color: Color(0x33000000))],
+        boxShadow: const [
+          BoxShadow(
+            blurRadius: 5,
+            offset: Offset(0, 2),
+            color: Color(0x33000000),
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, color: const Color(0xFFFFA800), size: 22),
           const SizedBox(width: 5),
-          Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF5B3A20))),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF5B3A20),
+            ),
+          ),
         ],
       ),
     );
@@ -157,7 +190,13 @@ class _StoreScene extends StatelessWidget {
             colors: [Color(0xFFFFF4D5), Color(0xFFFFDFA0)],
           ),
           border: Border.all(color: Colors.white.withValues(alpha: .8), width: 3),
-          boxShadow: const [BoxShadow(blurRadius: 14, offset: Offset(0, 7), color: Color(0x33000000))],
+          boxShadow: const [
+            BoxShadow(
+              blurRadius: 14,
+              offset: Offset(0, 7),
+              color: Color(0x33000000),
+            ),
+          ],
         ),
         child: Stack(
           children: [
@@ -168,8 +207,14 @@ class _StoreScene extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: const [
-                  _FeatureBubble(icon: Icons.card_giftcard_rounded, label: 'Daily'),
-                  _FeatureBubble(icon: Icons.emoji_events_rounded, label: 'Awards'),
+                  _FeatureBubble(
+                    icon: Icons.card_giftcard_rounded,
+                    label: 'Daily',
+                  ),
+                  _FeatureBubble(
+                    icon: Icons.emoji_events_rounded,
+                    label: 'Awards',
+                  ),
                 ],
               ),
             ),
@@ -180,7 +225,12 @@ class _StoreScene extends StatelessWidget {
               child: Text(
                 'MY MARKET',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: 2, color: Color(0xFF70451E)),
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 2,
+                  color: Color(0xFF70451E),
+                ),
               ),
             ),
             const Positioned(
@@ -215,12 +265,25 @@ class _FeatureBubble extends StatelessWidget {
             decoration: const BoxDecoration(
               color: Colors.white,
               shape: BoxShape.circle,
-              boxShadow: [BoxShadow(blurRadius: 7, offset: Offset(0, 3), color: Color(0x30000000))],
+              boxShadow: [
+                BoxShadow(
+                  blurRadius: 7,
+                  offset: Offset(0, 3),
+                  color: Color(0x30000000),
+                ),
+              ],
             ),
             child: Icon(icon, color: Color(0xFFFF9F1C), size: 27),
           ),
           const SizedBox(height: 4),
-          Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF70451E))),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF70451E),
+            ),
+          ),
         ],
       ),
     );
@@ -235,9 +298,30 @@ class _Shelves extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: const [
-        _Shelf(items: ['assets/images/products/can.svg', 'assets/images/products/juice.svg', 'assets/images/products/cookies.svg', 'assets/images/products/milk.svg']),
-        _Shelf(items: ['assets/images/products/apple.svg', 'assets/images/products/shampoo.svg', 'assets/images/products/juice.svg', 'assets/images/products/chocolate.svg']),
-        _Shelf(items: ['assets/images/products/milk.svg', 'assets/images/products/cookies.svg', 'assets/images/products/can.svg', 'assets/images/products/apple.svg']),
+        _Shelf(
+          items: [
+            'assets/images/products/can.svg',
+            'assets/images/products/juice.svg',
+            'assets/images/products/cookies.svg',
+            'assets/images/products/milk.svg',
+          ],
+        ),
+        _Shelf(
+          items: [
+            'assets/images/products/apple.svg',
+            'assets/images/products/shampoo.svg',
+            'assets/images/products/juice.svg',
+            'assets/images/products/chocolate.svg',
+          ],
+        ),
+        _Shelf(
+          items: [
+            'assets/images/products/milk.svg',
+            'assets/images/products/cookies.svg',
+            'assets/images/products/can.svg',
+            'assets/images/products/apple.svg',
+          ],
+        ),
       ],
     );
   }
@@ -257,7 +341,13 @@ class _Shelf extends StatelessWidget {
         color: const Color(0xFF9A5A2E),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFF6D3D20), width: 3),
-        boxShadow: const [BoxShadow(blurRadius: 4, offset: Offset(0, 4), color: Color(0x55000000))],
+        boxShadow: const [
+          BoxShadow(
+            blurRadius: 4,
+            offset: Offset(0, 4),
+            color: Color(0x55000000),
+          ),
+        ],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -281,9 +371,20 @@ class _Product extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(11),
-        boxShadow: const [BoxShadow(blurRadius: 3, offset: Offset(0, 2), color: Color(0x44000000))],
+        boxShadow: const [
+          BoxShadow(
+            blurRadius: 3,
+            offset: Offset(0, 2),
+            color: Color(0x44000000),
+          ),
+        ],
       ),
-      child: SvgPicture.asset(asset, width: 39, height: 53, fit: BoxFit.contain),
+      child: SvgPicture.asset(
+        asset,
+        width: 39,
+        height: 53,
+        fit: BoxFit.contain,
+      ),
     );
   }
 }
@@ -300,15 +401,34 @@ class _LevelCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: .96),
         borderRadius: BorderRadius.circular(24),
-        boxShadow: const [BoxShadow(blurRadius: 12, offset: Offset(0, 6), color: Color(0x44000000))],
+        boxShadow: const [
+          BoxShadow(
+            blurRadius: 12,
+            offset: Offset(0, 6),
+            color: Color(0x44000000),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          const Text('LEVEL 1', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: Color(0xFF6C431F))),
+          const Text(
+            'LEVEL 1',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.5,
+              color: Color(0xFF6C431F),
+            ),
+          ),
           const SizedBox(height: 8),
           ClipRRect(
             borderRadius: BorderRadius.circular(20),
-            child: const LinearProgressIndicator(minHeight: 9, value: 0, backgroundColor: Color(0xFFEBD8BC), valueColor: AlwaysStoppedAnimation(Color(0xFFFFB52E))),
+            child: const LinearProgressIndicator(
+              minHeight: 9,
+              value: 0,
+              backgroundColor: Color(0xFFEBD8BC),
+              valueColor: AlwaysStoppedAnimation(Color(0xFFFFB52E)),
+            ),
           ),
           const SizedBox(height: 12),
           SizedBox(
@@ -320,9 +440,18 @@ class _LevelCard extends StatelessWidget {
                 backgroundColor: const Color(0xFFFFA914),
                 foregroundColor: Colors.white,
                 elevation: 4,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
               ),
-              child: const Text('PLAY', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
+              child: const Text(
+                'PLAY',
+                style: TextStyle(
+                  fontSize: 21,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.5,
+                ),
+              ),
             ),
           ),
         ],
@@ -332,7 +461,9 @@ class _LevelCard extends StatelessWidget {
 }
 
 class _BottomNavigation extends StatelessWidget {
-  const _BottomNavigation();
+  const _BottomNavigation({this.onLevelsTap});
+
+  final VoidCallback? onLevelsTap;
 
   @override
   Widget build(BuildContext context) {
@@ -340,15 +471,35 @@ class _BottomNavigation extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
       decoration: const BoxDecoration(
         color: Colors.white,
-        boxShadow: [BoxShadow(blurRadius: 12, offset: Offset(0, -4), color: Color(0x30000000))],
+        boxShadow: [
+          BoxShadow(
+            blurRadius: 12,
+            offset: Offset(0, -4),
+            color: Color(0x30000000),
+          ),
+        ],
       ),
-      child: const Row(
+      child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _NavItem(icon: Icons.home_rounded, label: 'Home', selected: true),
-          _NavItem(icon: Icons.map_rounded, label: 'Levels'),
-          _NavItem(icon: Icons.card_giftcard_rounded, label: 'Events'),
-          _NavItem(icon: Icons.shopping_bag_rounded, label: 'Shop'),
+          const _NavItem(
+            icon: Icons.home_rounded,
+            label: 'Home',
+            selected: true,
+          ),
+          _NavItem(
+            icon: Icons.map_rounded,
+            label: 'Levels',
+            onTap: onLevelsTap,
+          ),
+          const _NavItem(
+            icon: Icons.card_giftcard_rounded,
+            label: 'Events',
+          ),
+          const _NavItem(
+            icon: Icons.shopping_bag_rounded,
+            label: 'Shop',
+          ),
         ],
       ),
     );
@@ -356,24 +507,47 @@ class _BottomNavigation extends StatelessWidget {
 }
 
 class _NavItem extends StatelessWidget {
-  const _NavItem({required this.icon, required this.label, this.selected = false});
+  const _NavItem({
+    required this.icon,
+    required this.label,
+    this.selected = false,
+    this.onTap,
+  });
 
   final IconData icon;
   final String label;
   final bool selected;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? const Color(0xFFFFA914) : const Color(0xFF8A7765);
+    final color = selected
+        ? const Color(0xFFFFA914)
+        : const Color(0xFF8A7765);
+
     return SizedBox(
       width: 70,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: color, size: 27),
-          const SizedBox(height: 2),
-          Text(label, style: TextStyle(fontSize: 11, fontWeight: selected ? FontWeight.w900 : FontWeight.w600, color: color)),
-        ],
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: color, size: 27),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: selected ? FontWeight.w900 : FontWeight.w600,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
