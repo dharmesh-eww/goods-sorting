@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'level_data.dart';
 import 'sorting_item.dart';
+import 'level_progress.dart';
 
 class LevelGenerator {
   static const products = <String>[
@@ -16,6 +17,12 @@ class LevelGenerator {
 
   static SortingLevel generate(int level) {
     if (level < 1) throw ArgumentError.value(level, 'level', 'Must be >= 1');
+
+    // The game transitions directly from a completed level to the next level.
+    // Sync the previous level here so the persisted progress is already updated
+    // when the player reaches the next board.
+    _syncProgressForNextLevel(level);
+
     final progress = ((level - 1) / 2499.0).clamp(0.0, 1.0);
     final difficulty = _smooth(progress);
     final random = Random(104729 + level * 7919);
@@ -27,17 +34,25 @@ class LevelGenerator {
     final capacity = shelfCount * maxStackDepth;
     final maxGroups = max(1, ((capacity - emptySlots) ~/ 3));
     final minGroups = min(2 + (level % 3), maxGroups);
-    final extraGroups = maxGroups > minGroups ? random.nextInt(maxGroups - minGroups + 1) : 0;
+    final extraGroups = maxGroups > minGroups
+        ? random.nextInt(maxGroups - minGroups + 1)
+        : 0;
     final targetGroups = min(maxGroups, minGroups + extraGroups);
     final shelves = List.generate(shelfCount, (_) => <int>[]);
 
     for (var group = 0; group < targetGroups; group++) {
-      final productId = _productForGroup(group, itemTypes, random, complexity, level);
+      final productId =
+          _productForGroup(group, itemTypes, random, complexity, level);
       for (var copy = 0; copy < 3; copy++) {
         final candidates = List<int>.generate(shelfCount, (i) => i);
         candidates.shuffle(random);
-        candidates.sort((a, b) => shelves[a].length.compareTo(shelves[b].length));
-        final spread = max(1, min(candidates.length, 2 + (complexity * shelfCount).floor()));
+        candidates.sort(
+          (a, b) => shelves[a].length.compareTo(shelves[b].length),
+        );
+        final spread = max(
+          1,
+          min(candidates.length, 2 + (complexity * shelfCount).floor()),
+        );
         final shelf = candidates[random.nextInt(spread)];
         shelves[shelf].add(productId);
       }
@@ -59,11 +74,37 @@ class LevelGenerator {
       final stack = shelves[shelfIndex];
       for (var stackIndex = 0; stackIndex < stack.length; stackIndex++) {
         final productId = stack[stackIndex];
-        items.add(SortingItem(productId: productId, asset: products[productId], stackIndex: stackIndex, shelfIndex: shelfIndex));
+        items.add(
+          SortingItem(
+            productId: productId,
+            asset: products[productId],
+            stackIndex: stackIndex,
+            shelfIndex: shelfIndex,
+          ),
+        );
       }
     }
 
-    return SortingLevel(levelNumber: level, difficulty: progress, itemTypes: itemTypes, shelfCount: shelfCount, maxStackDepth: maxStackDepth, emptySlots: emptySlots, complexity: complexity, items: List.unmodifiable(items));
+    return SortingLevel(
+      levelNumber: level,
+      difficulty: progress,
+      itemTypes: itemTypes,
+      shelfCount: shelfCount,
+      maxStackDepth: maxStackDepth,
+      emptySlots: emptySlots,
+      complexity: complexity,
+      items: List.unmodifiable(items),
+    );
+  }
+
+  static void _syncProgressForNextLevel(int level) {
+    final progress = LevelProgress.instance;
+    if (level == progress.highestUnlockedLevel + 1 &&
+        level <= LevelProgress.maxLevel) {
+      // Fire-and-forget persistence is intentional here because level
+      // generation is synchronous and must not block the first frame.
+      progress.markCompleted(level - 1);
+    }
   }
 
   static double _smooth(double value) => value * value * (3 - 2 * value);
@@ -109,13 +150,23 @@ class LevelGenerator {
 
   static int _emptySlots(int level) => level <= 100 ? 2 : 1;
 
-  static double _complexity(int level, double curved) => (curved + sin(level * .37) * .035 + sin(level * .11) * .02).clamp(0.0, 1.0);
+  static double _complexity(int level, double curved) =>
+      (curved + sin(level * .37) * .035 + sin(level * .11) * .02)
+          .clamp(0.0, 1.0);
 
-  static int _productForGroup(int group, int itemTypes, Random random, double complexity, int level) {
+  static int _productForGroup(
+    int group,
+    int itemTypes,
+    Random random,
+    double complexity,
+    int level,
+  ) {
     // Mix the deterministic level seed into early boards too. This prevents
     // levels 1-10 from looking like copies of the same board.
     final base = (group + level * 3) % itemTypes;
-    final offset = complexity < .18 ? random.nextInt(itemTypes) : (random.nextInt(itemTypes) + group * 2) % itemTypes;
+    final offset = complexity < .18
+        ? random.nextInt(itemTypes)
+        : (random.nextInt(itemTypes) + group * 2) % itemTypes;
     return (base + offset) % itemTypes;
   }
 }
