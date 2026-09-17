@@ -42,9 +42,18 @@ class _GoodsSortingGameScreenState extends State<GoodsSortingGameScreen>
   void initState() {
     super.initState();
     level = LevelGenerator.generate(widget.levelNumber);
-    _intro = AnimationController(vsync: this, duration: const Duration(milliseconds: 650))..forward();
-    _float = AnimationController(vsync: this, duration: const Duration(milliseconds: 1800))..repeat(reverse: true);
-    _hintPulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 650));
+    _intro = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 650),
+    )..forward();
+    _float = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat(reverse: true);
+    _hintPulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 650),
+    );
   }
 
   @override
@@ -57,13 +66,15 @@ class _GoodsSortingGameScreenState extends State<GoodsSortingGameScreen>
 
   int get clearedItems => removedItems.length;
   int get remainingItems => level.totalItems - clearedItems;
+  int get earnedCoins => (score ~/ 30) * 3;
 
   @override
   Widget build(BuildContext context) {
     final shelves = List.generate(
       level.shelfCount,
       (index) => level.items
-          .where((item) => item.shelfIndex == index && !removedItems.contains(item))
+          .where((item) =>
+              item.shelfIndex == index && !removedItems.contains(item))
           .toList()
         ..sort((a, b) => a.stackIndex.compareTo(b.stackIndex)),
     );
@@ -80,7 +91,13 @@ class _GoodsSortingGameScreenState extends State<GoodsSortingGameScreen>
         child: SafeArea(
           child: Column(
             children: [
-              _GameHeader(level: level, score: score, coins: coins, onBack: () => Navigator.pop(context), onPause: _showPause),
+              _GameHeader(
+                level: level,
+                score: score,
+                coins: coins,
+                onBack: _exitToLevels,
+                onPause: _showPause,
+              ),
               _ProgressBar(total: level.totalItems, cleared: clearedItems),
               Expanded(
                 child: AnimatedBuilder(
@@ -108,7 +125,11 @@ class _GoodsSortingGameScreenState extends State<GoodsSortingGameScreen>
                   ),
                 ),
               ),
-              _Tray(items: tray, maxSlots: _trayCapacity, onItemTap: _removeFromTray),
+              _Tray(
+                items: tray,
+                maxSlots: _trayCapacity,
+                onItemTap: _removeFromTray,
+              ),
               _GameActions(
                 moves: moves,
                 canUndo: moveHistory.isNotEmpty && !busy,
@@ -130,7 +151,9 @@ class _GoodsSortingGameScreenState extends State<GoodsSortingGameScreen>
 
   bool _isAccessible(SortingItem item) {
     final items = level.items
-        .where((candidate) => candidate.shelfIndex == item.shelfIndex && !removedItems.contains(candidate))
+        .where((candidate) =>
+            candidate.shelfIndex == item.shelfIndex &&
+            !removedItems.contains(candidate))
         .toList();
     return _topItem(items) == item;
   }
@@ -155,7 +178,8 @@ class _GoodsSortingGameScreenState extends State<GoodsSortingGameScreen>
   }
 
   Future<void> _checkMatch(int productId) async {
-    final matches = tray.where((item) => item.productId == productId).take(3).toList();
+    final matches =
+        tray.where((item) => item.productId == productId).take(3).toList();
     if (matches.length < 3 || busy) {
       _checkLose();
       return;
@@ -178,7 +202,7 @@ class _GoodsSortingGameScreenState extends State<GoodsSortingGameScreen>
     busy = false;
     if (!mounted) return;
 
-    if (remainingItems == 0) {
+    if (remainingItems == 0 && tray.isEmpty) {
       _showResult(true);
     } else {
       setState(() {});
@@ -222,7 +246,8 @@ class _GoodsSortingGameScreenState extends State<GoodsSortingGameScreen>
       return;
     }
 
-    final active = level.items.where((item) => !removedItems.contains(item)).toList();
+    final active =
+        level.items.where((item) => !removedItems.contains(item)).toList();
     if (active.length < 2) return;
     active.shuffle(math.Random(widget.levelNumber * 31 + moves + score));
 
@@ -261,7 +286,6 @@ class _GoodsSortingGameScreenState extends State<GoodsSortingGameScreen>
         complexity: level.complexity,
         items: List.unmodifiable(newItems),
       );
-      // Shuffling changes item identities, so start a clean move history.
       moveHistory.clear();
     });
     _showToast('Board shuffled');
@@ -277,7 +301,8 @@ class _GoodsSortingGameScreenState extends State<GoodsSortingGameScreen>
     final accessible = <SortingItem>[];
     for (var shelf = 0; shelf < level.shelfCount; shelf++) {
       final items = level.items
-          .where((item) => item.shelfIndex == shelf && !removedItems.contains(item))
+          .where((item) =>
+              item.shelfIndex == shelf && !removedItems.contains(item))
           .toList();
       final top = _topItem(items);
       if (top != null) accessible.add(top);
@@ -286,7 +311,9 @@ class _GoodsSortingGameScreenState extends State<GoodsSortingGameScreen>
     SortingItem? target;
     for (final item in accessible) {
       if (level.items.any((candidate) =>
-          candidate.productId == item.productId && candidate != item && !removedItems.contains(candidate))) {
+          candidate.productId == item.productId &&
+          candidate != item &&
+          !removedItems.contains(candidate))) {
         target = item;
         break;
       }
@@ -323,6 +350,11 @@ class _GoodsSortingGameScreenState extends State<GoodsSortingGameScreen>
       resultShowing = false;
     });
     _intro.forward(from: 0);
+  }
+
+  void _exitToLevels() {
+    if (busy || resultShowing) return;
+    Navigator.of(context).pop();
   }
 
   void _showPause() {
@@ -363,52 +395,118 @@ class _GoodsSortingGameScreenState extends State<GoodsSortingGameScreen>
         score: score,
         moves: moves,
         coins: coins,
-        onPrimary: () {
-          Navigator.of(context).pop();
-          if (!mounted) return;
-          setState(() => resultShowing = false);
-          if (win) {
-            if (widget.levelNumber >= _maxLevel) {
-              _showToast('All 2500 levels completed!');
-            } else {
-              Navigator.pushReplacement(
-                context,
-                PageRouteBuilder(
-                  transitionDuration: const Duration(milliseconds: 450),
-                  pageBuilder: (_, animation, __) => GoodsSortingGameScreen(levelNumber: widget.levelNumber + 1),
-                  transitionsBuilder: (_, animation, __, child) => FadeTransition(
-                    opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+        earnedCoins: earnedCoins,
+        onPrimary: () => _handleResultPrimary(win),
+        onExit: _handleResultExit,
+      ),
+      transitionBuilder: (_, animation, __, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutBack,
+        );
+        return FadeTransition(
+          opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+          child: ScaleTransition(
+            scale: Tween<double>(begin: .72, end: 1).animate(curved),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+
+  void _handleResultPrimary(bool win) {
+    Navigator.of(context).pop();
+    if (!mounted) return;
+    setState(() => resultShowing = false);
+
+    if (win) {
+      if (widget.levelNumber >= _maxLevel) {
+        _showToast('All 2500 levels completed!');
+      } else {
+        Navigator.pushReplacement(
+          context,
+          PageRouteBuilder(
+            transitionDuration: const Duration(milliseconds: 600),
+            reverseTransitionDuration: const Duration(milliseconds: 350),
+            pageBuilder: (_, __, ___) => GoodsSortingGameScreen(
+              levelNumber: widget.levelNumber + 1,
+            ),
+            transitionsBuilder: (_, animation, __, child) {
+              final curved = CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOutCubic,
+              );
+              return FadeTransition(
+                opacity: curved,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(.18, 0),
+                    end: Offset.zero,
+                  ).animate(curved),
+                  child: ScaleTransition(
+                    scale: Tween<double>(begin: .96, end: 1).animate(curved),
                     child: child,
                   ),
                 ),
               );
-            }
-          } else {
-            _resetLevel();
-          }
-        },
-      ),
-      transitionBuilder: (_, animation, __, child) {
-        final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutBack);
-        return FadeTransition(
-          opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
-          child: ScaleTransition(scale: Tween<double>(begin: .72, end: 1).animate(curved), child: child),
+            },
+          ),
         );
-      },
-    );
+      }
+    } else {
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder(
+          transitionDuration: const Duration(milliseconds: 500),
+          pageBuilder: (_, __, ___) => GoodsSortingGameScreen(
+            levelNumber: widget.levelNumber,
+          ),
+          transitionsBuilder: (_, animation, __, child) {
+            final curved = CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOutBack,
+            );
+            return FadeTransition(
+              opacity: curved,
+              child: ScaleTransition(
+                scale: Tween<double>(begin: .92, end: 1).animate(curved),
+                child: child,
+              ),
+            );
+          },
+        ),
+      );
+    }
+  }
+
+  void _handleResultExit() {
+    Navigator.of(context).pop();
+    if (!mounted) return;
+    setState(() => resultShowing = false);
+    Future<void>.delayed(const Duration(milliseconds: 30), () {
+      if (mounted) Navigator.of(context).pop();
+    });
   }
 
   void _showToast(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(
-        content: Text(message, style: const TextStyle(fontWeight: FontWeight.w800)),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(milliseconds: 900),
-        margin: const EdgeInsets.fromLTRB(24, 0, 24, 18),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      ));
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            message,
+            style: const TextStyle(fontWeight: FontWeight.w800),
+          ),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(milliseconds: 900),
+          margin: const EdgeInsets.fromLTRB(24, 0, 24, 18),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+      );
   }
 }
 
@@ -419,7 +517,9 @@ class _ResultDialog extends StatefulWidget {
     required this.score,
     required this.moves,
     required this.coins,
+    required this.earnedCoins,
     required this.onPrimary,
+    required this.onExit,
   });
 
   final bool win;
@@ -427,21 +527,36 @@ class _ResultDialog extends StatefulWidget {
   final int score;
   final int moves;
   final int coins;
+  final int earnedCoins;
   final VoidCallback onPrimary;
+  final VoidCallback onExit;
 
   @override
   State<_ResultDialog> createState() => _ResultDialogState();
 }
 
-class _ResultDialogState extends State<_ResultDialog> with SingleTickerProviderStateMixin {
+class _ResultDialogState extends State<_ResultDialog>
+    with TickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1200),
   )..forward();
 
+  late final AnimationController _confetti = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2400),
+  )..forward();
+
+  late final AnimationController _reward = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1000),
+  )..forward();
+
   @override
   void dispose() {
     _controller.dispose();
+    _confetti.dispose();
+    _reward.dispose();
     super.dispose();
   }
 
@@ -455,112 +570,284 @@ class _ResultDialogState extends State<_ResultDialog> with SingleTickerProviderS
     return Material(
       color: Colors.transparent,
       child: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 25),
-            child: AnimatedBuilder(
-              animation: _controller,
-              builder: (context, child) {
-                final t = Curves.elasticOut.transform(_controller.value);
-                return Transform.translate(
-                  offset: Offset(0, 24 * (1 - _controller.value)),
-                  child: Transform.scale(scale: .96 + t * .04, child: child),
-                );
-              },
-              child: Container(
-                width: double.infinity,
-                constraints: const BoxConstraints(maxWidth: 390),
-                padding: const EdgeInsets.fromLTRB(22, 18, 22, 22),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Color(0xFFFFFEF5), Color(0xFFFFD776)],
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            if (widget.win)
+              Positioned.fill(
+                child: IgnorePointer(child: _Confetti(animation: _confetti)),
+              ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 25),
+              child: AnimatedBuilder(
+                animation: _controller,
+                builder: (context, child) {
+                  final t = Curves.elasticOut.transform(_controller.value);
+                  return Transform.translate(
+                    offset: Offset(0, 24 * (1 - _controller.value)),
+                    child: Transform.scale(
+                      scale: .96 + t * .04,
+                      child: child,
+                    ),
+                  );
+                },
+                child: Container(
+                  width: double.infinity,
+                  constraints: const BoxConstraints(maxWidth: 390),
+                  padding: const EdgeInsets.fromLTRB(22, 18, 22, 22),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Color(0xFFFFFEF5), Color(0xFFFFD776)],
+                    ),
+                    borderRadius: BorderRadius.circular(32),
+                    border: Border.all(color: Colors.white, width: 3),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x88000000),
+                        blurRadius: 28,
+                        offset: Offset(0, 14),
+                      ),
+                      BoxShadow(
+                        color: Color(0x55FFFFFF),
+                        blurRadius: 4,
+                        spreadRadius: 1,
+                      ),
+                    ],
                   ),
-                  borderRadius: BorderRadius.circular(32),
-                  border: Border.all(color: Colors.white, width: 3),
-                  boxShadow: const [
-                    BoxShadow(color: Color(0x88000000), blurRadius: 28, offset: Offset(0, 14)),
-                    BoxShadow(color: Color(0x55FFFFFF), blurRadius: 4, spreadRadius: 1),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _ResultBurst(win: widget.win),
-                    const SizedBox(height: 8),
-                    Text(
-                      title,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 27,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: .5,
-                        color: widget.win ? const Color(0xFF704016) : const Color(0xFF8A3E22),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _ResultBurst(win: widget.win, animation: _controller),
+                      const SizedBox(height: 8),
+                      Text(
+                        title,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 27,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: .5,
+                          color: widget.win
+                              ? const Color(0xFF704016)
+                              : const Color(0xFF8A3E22),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      subtitle,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 12, height: 1.3, fontWeight: FontWeight.w600, color: Color(0xFF8A6845)),
-                    ),
-                    const SizedBox(height: 18),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        _ResultStat(icon: Icons.stars_rounded, label: 'SCORE', value: '${widget.score}'),
-                        _ResultStat(icon: Icons.touch_app_rounded, label: 'MOVES', value: '${widget.moves}'),
-                        _ResultStat(icon: Icons.monetization_on_rounded, label: 'COINS', value: '${widget.coins}'),
+                      const SizedBox(height: 5),
+                      Text(
+                        subtitle,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          height: 1.3,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF8A6845),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _ResultStat(
+                            icon: Icons.stars_rounded,
+                            label: 'SCORE',
+                            value: '${widget.score}',
+                          ),
+                          _ResultStat(
+                            icon: Icons.touch_app_rounded,
+                            label: 'MOVES',
+                            value: '${widget.moves}',
+                          ),
+                          _ResultStat(
+                            icon: Icons.monetization_on_rounded,
+                            label: 'COINS',
+                            value: '${widget.coins}',
+                          ),
+                        ],
+                      ),
+                      if (widget.win) ...[
+                        const SizedBox(height: 10),
+                        _RewardAnimation(
+                          animation: _reward,
+                          coins: widget.earnedCoins,
+                        ),
+                        const SizedBox(height: 3),
+                        _Stars(animation: _reward),
                       ],
-                    ),
-                    if (widget.win) ...[
-                      const SizedBox(height: 14),
-                      _Stars(),
-                    ],
-                    const SizedBox(height: 18),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 54,
-                      child: ElevatedButton.icon(
-                        onPressed: widget.onPrimary,
-                        icon: Icon(widget.win ? Icons.arrow_forward_rounded : Icons.refresh_rounded),
-                        label: Text(
-                          widget.win
-                              ? (widget.level >= 2500 ? 'FINISH' : 'NEXT LEVEL')
-                              : 'TRY AGAIN',
-                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, letterSpacing: .4),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: widget.win ? const Color(0xFF8A4B22) : const Color(0xFFB54F2A),
-                          foregroundColor: Colors.white,
-                          elevation: 7,
-                          shadowColor: const Color(0x66000000),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                        ),
-                      ),
-                    ),
-                    if (!widget.win) ...[
-                      const SizedBox(height: 9),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          // The result overlay is intentionally closed only by the
-                          // retry action in normal flow; this gives the player a
-                          // quick route back to the current board.
-                          if (mounted) {}
-                        },
-                        child: const Text(
-                          'BACK TO GAME',
-                          style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF7B5A38)),
+                      const SizedBox(height: 18),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 54,
+                        child: ElevatedButton.icon(
+                          onPressed: widget.onPrimary,
+                          icon: Icon(
+                            widget.win
+                                ? Icons.arrow_forward_rounded
+                                : Icons.refresh_rounded,
+                          ),
+                          label: Text(
+                            widget.win
+                                ? (widget.level >= 2500
+                                    ? 'FINISH'
+                                    : 'NEXT LEVEL')
+                                : 'TRY AGAIN',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: .4,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: widget.win
+                                ? const Color(0xFF8A4B22)
+                                : const Color(0xFFB54F2A),
+                            foregroundColor: Colors.white,
+                            elevation: 7,
+                            shadowColor: const Color(0x66000000),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                          ),
                         ),
                       ),
+                      const SizedBox(height: 8),
+                      TextButton.icon(
+                        onPressed: widget.onExit,
+                        icon: const Icon(Icons.grid_view_rounded, size: 17),
+                        label: const Text(
+                          'EXIT TO LEVELS',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF7B5A38),
+                          ),
+                        ),
+                      ),
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Confetti extends StatelessWidget {
+  const _Confetti({required this.animation});
+  final Animation<double> animation;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) {
+        return Stack(
+          children: List.generate(34, (index) {
+            final seed = index * 17 + 5;
+            final startX = ((seed * 37) % 100) / 100.0;
+            final drift = math.sin(seed * .9) * 28;
+            final speed = .72 + (seed % 7) * .055;
+            final progress = (animation.value * speed) % 1.0;
+            final x = MediaQuery.sizeOf(context).width * startX +
+                drift * math.sin(progress * math.pi * 2);
+            final y = -30 +
+                MediaQuery.sizeOf(context).height * progress * 1.12;
+            final rotation = progress * math.pi * (2 + index % 3);
+            final size = 5.0 + (index % 4) * 2.0;
+            final shapes = [
+              Icons.star_rounded,
+              Icons.circle,
+              Icons.square_rounded,
+              Icons.diamond_rounded,
+            ];
+            return Positioned(
+              left: x,
+              top: y,
+              child: Transform.rotate(
+                angle: rotation,
+                child: Icon(
+                  shapes[index % shapes.length],
+                  size: size + 5,
+                  color: _confettiColor(index),
+                ),
+              ),
+            );
+          }),
+        );
+      },
+    );
+  }
+
+  Color _confettiColor(int index) {
+    const colors = [
+      Color(0xFFFFB52B),
+      Color(0xFFEF6C45),
+      Color(0xFF58A85C),
+      Color(0xFF4C8FD8),
+      Color(0xFFB96DD8),
+    ];
+    return colors[index % colors.length];
+  }
+}
+
+class _RewardAnimation extends StatelessWidget {
+  const _RewardAnimation({required this.animation, required this.coins});
+  final Animation<double> animation;
+  final int coins;
+
+  @override
+  Widget build(BuildContext context) {
+    if (coins <= 0) return const SizedBox.shrink();
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) {
+        final curved = Curves.easeOutBack.transform(animation.value);
+        final opacity = Curves.easeOut.transform(
+          math.min(1.0, animation.value * 1.7),
+        );
+        return Opacity(
+          opacity: opacity,
+          child: Transform.translate(
+            offset: Offset(0, 10 * (1 - curved)),
+            child: Transform.scale(scale: .8 + curved * .2, child: child),
           ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 5),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF2BE),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFFFC83D), width: 1.5),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x22000000),
+              blurRadius: 5,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.monetization_on_rounded,
+              size: 18,
+              color: Color(0xFFE68A18),
+            ),
+            const SizedBox(width: 5),
+            Text(
+              '+$coins COINS',
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+                letterSpacing: .5,
+                color: Color(0xFF754318),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -568,65 +855,103 @@ class _ResultDialogState extends State<_ResultDialog> with SingleTickerProviderS
 }
 
 class _ResultBurst extends StatelessWidget {
-  const _ResultBurst({required this.win});
+  const _ResultBurst({required this.win, required this.animation});
   final bool win;
+  final Animation<double> animation;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 118,
-      height: 88,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          ...List.generate(8, (index) {
-            final angle = index * math.pi / 4;
-            return Transform.translate(
-              offset: Offset(math.cos(angle) * 43, math.sin(angle) * 31),
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) {
+        final pulse = 1 + math.sin(animation.value * math.pi * 3) * .035;
+        return Transform.scale(scale: pulse, child: child);
+      },
+      child: SizedBox(
+        width: 118,
+        height: 88,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            ...List.generate(8, (index) {
+              final angle = index * math.pi / 4;
+              return Transform.translate(
+                offset: Offset(math.cos(angle) * 43, math.sin(angle) * 31),
+                child: Icon(
+                  win ? Icons.star_rounded : Icons.close_rounded,
+                  size: index.isEven ? 17 : 12,
+                  color: win
+                      ? const Color(0xFFFFB52B)
+                      : const Color(0xFFD46A3A),
+                ),
+              );
+            }),
+            Container(
+              width: 76,
+              height: 76,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: win
+                      ? const [Color(0xFFFFC83D), Color(0xFFF27A1D)]
+                      : const [Color(0xFFE98250), Color(0xFFB84628)],
+                ),
+                border: Border.all(color: Colors.white, width: 3),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x55000000),
+                    blurRadius: 9,
+                    offset: Offset(0, 5),
+                  ),
+                ],
+              ),
               child: Icon(
-                win ? Icons.star_rounded : Icons.close_rounded,
-                size: index.isEven ? 17 : 12,
-                color: win ? const Color(0xFFFFB52B) : const Color(0xFFD46A3A),
+                win ? Icons.emoji_events_rounded : Icons.close_rounded,
+                color: Colors.white,
+                size: 42,
               ),
-            );
-          }),
-          Container(
-            width: 76,
-            height: 76,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: win
-                    ? const [Color(0xFFFFC83D), Color(0xFFF27A1D)]
-                    : const [Color(0xFFE98250), Color(0xFFB84628)],
-              ),
-              border: Border.all(color: Colors.white, width: 3),
-              boxShadow: const [BoxShadow(color: Color(0x55000000), blurRadius: 9, offset: Offset(0, 5))],
             ),
-            child: Icon(win ? Icons.emoji_events_rounded : Icons.close_rounded, color: Colors.white, size: 42),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
 class _Stars extends StatelessWidget {
+  const _Stars({required this.animation});
+  final Animation<double> animation;
+
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(3, (index) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 3),
-          child: Transform.rotate(
-            angle: index == 1 ? 0 : (index == 0 ? -.12 : .12),
-            child: Icon(Icons.star_rounded, size: index == 1 ? 42 : 34, color: const Color(0xFFFFA914)),
-          ),
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(3, (index) {
+            final start = .35 + index * .14;
+            final progress = ((animation.value - start) / .35).clamp(0.0, 1.0);
+            final scale = Curves.elasticOut.transform(progress);
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 3),
+              child: Transform.rotate(
+                angle: index == 1 ? 0 : (index == 0 ? -.12 : .12),
+                child: Transform.scale(
+                  scale: scale,
+                  child: Icon(
+                    Icons.star_rounded,
+                    size: index == 1 ? 42 : 34,
+                    color: const Color(0xFFFFA914),
+                  ),
+                ),
+              ),
+            );
+          }),
         );
-      }),
+      },
     );
   }
 }
@@ -643,15 +968,37 @@ class _ResultStat extends StatelessWidget {
       children: [
         Icon(icon, size: 21, color: const Color(0xFFE58A1D)),
         const SizedBox(height: 2),
-        Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF613A1D))),
-        Text(label, style: const TextStyle(fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: .9, color: Color(0xFF9A7048))),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w900,
+            color: Color(0xFF613A1D),
+          ),
+        ),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 8,
+            fontWeight: FontWeight.w900,
+            letterSpacing: .9,
+            color: Color(0xFF9A7048),
+          ),
+        ),
       ],
     );
   }
 }
 
 class _GameHeader extends StatelessWidget {
-  const _GameHeader({required this.level, required this.score, required this.coins, required this.onBack, required this.onPause});
+  const _GameHeader({
+    required this.level,
+    required this.score,
+    required this.coins,
+    required this.onBack,
+    required this.onPause,
+  });
+
   final SortingLevel level;
   final int score;
   final int coins;
@@ -670,8 +1017,24 @@ class _GameHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('LEVEL ${level.levelNumber}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 1, color: Color(0xFF5D381D))),
-                Text(_difficultyName(level.difficulty), style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 1.2, color: Color(0xFF986B3F))),
+                Text(
+                  'LEVEL ${level.levelNumber}',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1,
+                    color: Color(0xFF5D381D),
+                  ),
+                ),
+                Text(
+                  _difficultyName(level.difficulty),
+                  style: const TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.2,
+                    color: Color(0xFF986B3F),
+                  ),
+                ),
               ],
             ),
           ),
@@ -698,16 +1061,32 @@ class _ProgressBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 3),
       child: Row(
         children: [
-          const Icon(Icons.shopping_basket_rounded, size: 17, color: Color(0xFF9B632E)),
+          const Icon(
+            Icons.shopping_basket_rounded,
+            size: 17,
+            color: Color(0xFF9B632E),
+          ),
           const SizedBox(width: 6),
           Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child: LinearProgressIndicator(value: value, minHeight: 8, backgroundColor: const Color(0x55FFFFFF), valueColor: const AlwaysStoppedAnimation(Color(0xFFF28B16))),
+              child: LinearProgressIndicator(
+                value: value,
+                minHeight: 8,
+                backgroundColor: const Color(0x55FFFFFF),
+                valueColor: const AlwaysStoppedAnimation(Color(0xFFF28B16)),
+              ),
             ),
           ),
           const SizedBox(width: 8),
-          Text('$cleared/$total', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF633E20))),
+          Text(
+            '$cleared/$total',
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF633E20),
+            ),
+          ),
         ],
       ),
     );
@@ -715,7 +1094,16 @@ class _ProgressBar extends StatelessWidget {
 }
 
 class _Shelf extends StatelessWidget {
-  const _Shelf({super.key, required this.shelfNumber, required this.items, required this.topItem, required this.floatAnimation, required this.hintItem, required this.onItemTap});
+  const _Shelf({
+    super.key,
+    required this.shelfNumber,
+    required this.items,
+    required this.topItem,
+    required this.floatAnimation,
+    required this.hintItem,
+    required this.onItemTap,
+  });
+
   final int shelfNumber;
   final List<SortingItem> items;
   final SortingItem? topItem;
@@ -729,35 +1117,97 @@ class _Shelf extends StatelessWidget {
       height: 108,
       margin: const EdgeInsets.only(bottom: 9),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFFFFFCF2), Color(0xFFFFE5AA)]),
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFFFFCF2), Color(0xFFFFE5AA)],
+        ),
         borderRadius: BorderRadius.circular(21),
         border: Border.all(color: Colors.white, width: 2),
-        boxShadow: const [BoxShadow(color: Color(0x40000000), blurRadius: 9, offset: Offset(0, 5))],
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x40000000),
+            blurRadius: 9,
+            offset: Offset(0, 5),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          SizedBox(width: 33, child: Center(child: Text('$shelfNumber', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF9A7048))))),
+          SizedBox(
+            width: 33,
+            child: Center(
+              child: Text(
+                '$shelfNumber',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF9A7048),
+                ),
+              ),
+            ),
+          ),
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final count = math.max(1, items.length);
-                final size = math.min(57.0, math.max(43.0, constraints.maxWidth / math.min(5, count)));
+                final size = math.min(
+                  57.0,
+                  math.max(43.0, constraints.maxWidth / math.min(5, count)),
+                );
                 return Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    Positioned(left: 0, right: 0, bottom: 7, child: Container(height: 9, decoration: BoxDecoration(color: const Color(0xFFAA672D), borderRadius: BorderRadius.circular(8), boxShadow: const [BoxShadow(color: Color(0x35000000), blurRadius: 2, offset: Offset(0, 2))]))),
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 7,
+                      child: Container(
+                        height: 9,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFAA672D),
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x35000000),
+                              blurRadius: 2,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                     ...items.asMap().entries.map((entry) {
                       final index = entry.key;
                       final item = entry.value;
                       final isTop = item == topItem;
-                      final depthFromTop = topItem == null ? 0 : topItem!.stackIndex - item.stackIndex;
+                      final depthFromTop = topItem == null
+                          ? 0
+                          : topItem!.stackIndex - item.stackIndex;
                       return Positioned(
-                        left: math.min(constraints.maxWidth - size, index * (size - 3)),
+                        left: math.min(
+                          constraints.maxWidth - size,
+                          index * (size - 3),
+                        ),
                         bottom: 12 + math.max(0, depthFromTop) * 5.5,
                         child: AnimatedBuilder(
                           animation: floatAnimation,
-                          builder: (context, child) => Transform.translate(offset: Offset(0, isTop ? math.sin(floatAnimation.value * math.pi) * 1.6 : 0), child: child),
-                          child: _ProductCard(item: item, size: size, enabled: isTop, highlighted: item == hintItem, onTap: () => onItemTap(item)),
+                          builder: (context, child) => Transform.translate(
+                            offset: Offset(
+                              0,
+                              isTop
+                                  ? math.sin(floatAnimation.value * math.pi) * 1.6
+                                  : 0,
+                            ),
+                            child: child,
+                          ),
+                          child: _ProductCard(
+                            item: item,
+                            size: size,
+                            enabled: isTop,
+                            highlighted: item == hintItem,
+                            onTap: () => onItemTap(item),
+                          ),
                         ),
                       );
                     }),
@@ -773,7 +1223,14 @@ class _Shelf extends StatelessWidget {
 }
 
 class _ProductCard extends StatefulWidget {
-  const _ProductCard({required this.item, required this.size, required this.enabled, required this.highlighted, required this.onTap});
+  const _ProductCard({
+    required this.item,
+    required this.size,
+    required this.enabled,
+    required this.highlighted,
+    required this.onTap,
+  });
+
   final SortingItem item;
   final double size;
   final bool enabled;
@@ -792,8 +1249,14 @@ class _ProductCardState extends State<_ProductCard> {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTapDown: widget.enabled ? (_) => setState(() => pressed = true) : null,
-      onTapUp: widget.enabled ? (_) { setState(() => pressed = false); widget.onTap(); } : null,
-      onTapCancel: widget.enabled ? () => setState(() => pressed = false) : null,
+      onTapUp: widget.enabled
+          ? (_) {
+              setState(() => pressed = false);
+              widget.onTap();
+            }
+          : null,
+      onTapCancel:
+          widget.enabled ? () => setState(() => pressed = false) : null,
       child: AnimatedScale(
         scale: pressed ? .86 : 1,
         duration: const Duration(milliseconds: 85),
@@ -803,12 +1266,34 @@ class _ProductCardState extends State<_ProductCard> {
           height: widget.size - 3,
           padding: EdgeInsets.all(widget.size * .10),
           decoration: BoxDecoration(
-            gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: widget.enabled ? const [Colors.white, Color(0xFFF4E4C3)] : const [Color(0xFFE8DCC4), Color(0xFFCBB996)]),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: widget.enabled
+                  ? const [Colors.white, Color(0xFFF4E4C3)]
+                  : const [Color(0xFFE8DCC4), Color(0xFFCBB996)],
+            ),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: widget.highlighted ? const Color(0xFFFF8B18) : widget.enabled ? const Color(0xFFFFC34D) : const Color(0xFFB79B72), width: widget.highlighted ? 3 : 2),
-            boxShadow: [BoxShadow(color: const Color(0x40000000), blurRadius: widget.enabled ? 6 : 3, offset: const Offset(0, 4))],
+            border: Border.all(
+              color: widget.highlighted
+                  ? const Color(0xFFFF8B18)
+                  : widget.enabled
+                      ? const Color(0xFFFFC34D)
+                      : const Color(0xFFB79B72),
+              width: widget.highlighted ? 3 : 2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0x40000000),
+                blurRadius: widget.enabled ? 6 : 3,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          child: Opacity(opacity: widget.enabled ? 1 : .68, child: SvgPicture.asset(widget.item.asset)),
+          child: Opacity(
+            opacity: widget.enabled ? 1 : .68,
+            child: SvgPicture.asset(widget.item.asset),
+          ),
         ),
       ),
     );
@@ -816,7 +1301,12 @@ class _ProductCardState extends State<_ProductCard> {
 }
 
 class _Tray extends StatelessWidget {
-  const _Tray({required this.items, required this.maxSlots, required this.onItemTap});
+  const _Tray({
+    required this.items,
+    required this.maxSlots,
+    required this.onItemTap,
+  });
+
   final List<SortingItem> items;
   final int maxSlots;
   final ValueChanged<SortingItem> onItemTap;
@@ -827,14 +1317,50 @@ class _Tray extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(13, 1, 13, 5),
       padding: const EdgeInsets.fromLTRB(9, 7, 9, 8),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [Color(0xFF874923), Color(0xFF633318)]),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF874923), Color(0xFF633318)],
+        ),
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: const Color(0xFFFFD277), width: 2),
-        boxShadow: const [BoxShadow(color: Color(0x50000000), blurRadius: 8, offset: Offset(0, 5))],
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x50000000),
+            blurRadius: 8,
+            offset: Offset(0, 5),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          Row(children: [const Icon(Icons.inventory_2_rounded, size: 16, color: Color(0xFFFFD277)), const SizedBox(width: 6), const Expanded(child: Text('MATCH TRAY', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1, color: Colors.white))), Text('${items.length}/$maxSlots', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFFFFE4A8)))]),
+          Row(
+            children: [
+              const Icon(
+                Icons.inventory_2_rounded,
+                size: 16,
+                color: Color(0xFFFFD277),
+              ),
+              const SizedBox(width: 6),
+              const Expanded(
+                child: Text(
+                  'MATCH TRAY',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              Text(
+                '${items.length}/$maxSlots',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFFFFE4A8),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 5),
           SizedBox(
             height: 50,
@@ -846,13 +1372,39 @@ class _Tray extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 2),
                     child: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 180),
-                      transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: child),
+                      transitionBuilder: (child, animation) => ScaleTransition(
+                        scale: animation,
+                        child: child,
+                      ),
                       child: item == null
-                          ? Container(key: ValueKey('empty-$index'), decoration: BoxDecoration(color: const Color(0x3320100A), borderRadius: BorderRadius.circular(11), border: Border.all(color: const Color(0x66FFD98B))))
+                          ? Container(
+                              key: ValueKey('empty-$index'),
+                              decoration: BoxDecoration(
+                                color: const Color(0x3320100A),
+                                borderRadius: BorderRadius.circular(11),
+                                border: Border.all(
+                                  color: const Color(0x66FFD98B),
+                                ),
+                              ),
+                            )
                           : GestureDetector(
                               key: ValueKey('tray-${identityHashCode(item)}'),
                               onTap: () => onItemTap(item),
-                              child: Container(padding: const EdgeInsets.all(5), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(11), boxShadow: const [BoxShadow(color: Color(0x45000000), blurRadius: 4, offset: Offset(0, 3))]), child: SvgPicture.asset(item.asset)),
+                              child: Container(
+                                padding: const EdgeInsets.all(5),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(11),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Color(0x45000000),
+                                      blurRadius: 4,
+                                      offset: Offset(0, 3),
+                                    ),
+                                  ],
+                                ),
+                                child: SvgPicture.asset(item.asset),
+                              ),
                             ),
                     ),
                   ),
@@ -867,7 +1419,14 @@ class _Tray extends StatelessWidget {
 }
 
 class _GameActions extends StatelessWidget {
-  const _GameActions({required this.moves, required this.canUndo, required this.onShuffle, required this.onUndo, required this.onHint});
+  const _GameActions({
+    required this.moves,
+    required this.canUndo,
+    required this.onShuffle,
+    required this.onUndo,
+    required this.onHint,
+  });
+
   final int moves;
   final bool canUndo;
   final VoidCallback onShuffle;
@@ -878,19 +1437,44 @@ class _GameActions extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 1, 14, 7),
-      child: Row(children: [
-        Expanded(child: _ActionButton(icon: Icons.shuffle_rounded, label: 'SHUFFLE', onTap: onShuffle)),
-        const SizedBox(width: 7),
-        Expanded(child: _ActionButton(icon: Icons.undo_rounded, label: '$moves MOVES', onTap: canUndo ? onUndo : null)),
-        const SizedBox(width: 7),
-        Expanded(child: _ActionButton(icon: Icons.lightbulb_rounded, label: 'HINT', onTap: onHint)),
-      ]),
+      child: Row(
+        children: [
+          Expanded(
+            child: _ActionButton(
+              icon: Icons.shuffle_rounded,
+              label: 'SHUFFLE',
+              onTap: onShuffle,
+            ),
+          ),
+          const SizedBox(width: 7),
+          Expanded(
+            child: _ActionButton(
+              icon: Icons.undo_rounded,
+              label: '$moves MOVES',
+              onTap: canUndo ? onUndo : null,
+            ),
+          ),
+          const SizedBox(width: 7),
+          Expanded(
+            child: _ActionButton(
+              icon: Icons.lightbulb_rounded,
+              label: 'HINT',
+              onTap: onHint,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
 class _ActionButton extends StatelessWidget {
-  const _ActionButton({required this.icon, required this.label, required this.onTap});
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
   final IconData icon;
   final String label;
   final VoidCallback? onTap;
@@ -908,8 +1492,35 @@ class _ActionButton extends StatelessWidget {
           opacity: enabled ? 1 : .48,
           child: Container(
             height: 47,
-            decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFFFFF9E8), Color(0xFFFFE2A1)]), borderRadius: BorderRadius.circular(15), border: Border.all(color: Colors.white, width: 1.5), boxShadow: const [BoxShadow(color: Color(0x35000000), blurRadius: 5, offset: Offset(0, 3))]),
-            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(icon, size: 19, color: const Color(0xFF633E20)), const SizedBox(height: 1), Text(label, style: const TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Color(0xFF633E20)))]),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFFFF9E8), Color(0xFFFFE2A1)],
+              ),
+              borderRadius: BorderRadius.circular(15),
+              border: Border.all(color: Colors.white, width: 1.5),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x35000000),
+                  blurRadius: 5,
+                  offset: Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 19, color: const Color(0xFF633E20)),
+                const SizedBox(height: 1),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 8,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF633E20),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -929,7 +1540,27 @@ class _RoundButton extends StatelessWidget {
       child: InkWell(
         customBorder: const CircleBorder(),
         onTap: onTap,
-        child: Container(width: 43, height: 43, decoration: BoxDecoration(shape: BoxShape.circle, gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Colors.white, Color(0xFFFFD986)]), border: Border.all(color: Colors.white, width: 2), boxShadow: const [BoxShadow(color: Color(0x3B000000), blurRadius: 5, offset: Offset(0, 3))]), child: Icon(icon, color: const Color(0xFF633E20), size: 21)),
+        child: Container(
+          width: 43,
+          height: 43,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Colors.white, Color(0xFFFFD986)],
+            ),
+            border: Border.all(color: Colors.white, width: 2),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x3B000000),
+                blurRadius: 5,
+                offset: Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Icon(icon, color: const Color(0xFF633E20), size: 21),
+        ),
       ),
     );
   }
@@ -942,7 +1573,29 @@ class _SmallStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(height: 34, padding: const EdgeInsets.symmetric(horizontal: 8), decoration: BoxDecoration(color: const Color(0xAAFFF8DF), borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.white, width: 1.5)), child: Row(children: [Icon(icon, size: 16, color: const Color(0xFFE78B17)), const SizedBox(width: 3), Text(value, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF633E20)))]));
+    return Container(
+      height: 34,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xAAFFF8DF),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white, width: 1.5),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: const Color(0xFFE78B17)),
+          const SizedBox(width: 3),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF633E20),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -958,15 +1611,29 @@ class _PauseSheet extends StatelessWidget {
       title: 'GAME PAUSED',
       subtitle: 'Take a break. Your board is safe.',
       actions: [
-        _SheetButton(label: 'RESUME', icon: Icons.play_arrow_rounded, onTap: onResume),
-        _SheetButton(label: 'RESTART', icon: Icons.refresh_rounded, onTap: onRestart),
+        _SheetButton(
+          label: 'RESUME',
+          icon: Icons.play_arrow_rounded,
+          onTap: onResume,
+        ),
+        _SheetButton(
+          label: 'RESTART',
+          icon: Icons.refresh_rounded,
+          onTap: onRestart,
+        ),
       ],
     );
   }
 }
 
 class _SheetFrame extends StatelessWidget {
-  const _SheetFrame({required this.icon, required this.title, required this.subtitle, required this.actions});
+  const _SheetFrame({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.actions,
+  });
+
   final IconData icon;
   final String title;
   final String subtitle;
@@ -976,31 +1643,103 @@ class _SheetFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 10, 18, 25),
-      decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFFFFF8E5), Color(0xFFFFD47A)]), borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Container(width: 46, height: 5, decoration: BoxDecoration(color: const Color(0x55805A2E), borderRadius: BorderRadius.circular(8))),
-        const SizedBox(height: 13),
-        Container(width: 66, height: 66, decoration: const BoxDecoration(shape: BoxShape.circle, gradient: LinearGradient(colors: [Color(0xFFFFB52B), Color(0xFFF07A20)])), child: Icon(icon, color: Colors.white, size: 36)),
-        const SizedBox(height: 9),
-        Text(title, style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w900, color: Color(0xFF60391E))),
-        const SizedBox(height: 3),
-        Text(subtitle, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF8B623D))),
-        const SizedBox(height: 15),
-        ...actions,
-      ]),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFFFF8E5), Color(0xFFFFD47A)],
+        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 46,
+            height: 5,
+            decoration: BoxDecoration(
+              color: const Color(0x55805A2E),
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          const SizedBox(height: 13),
+          Container(
+            width: 66,
+            height: 66,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [Color(0xFFFFB52B), Color(0xFFF07A20)],
+              ),
+            ),
+            child: Icon(icon, color: Colors.white, size: 36),
+          ),
+          const SizedBox(height: 9),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 23,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF60391E),
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF8B623D),
+            ),
+          ),
+          const SizedBox(height: 15),
+          ...actions,
+        ],
+      ),
     );
   }
 }
 
 class _SheetButton extends StatelessWidget {
-  const _SheetButton({required this.label, required this.icon, required this.onTap});
+  const _SheetButton({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
   final String label;
   final IconData icon;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(padding: const EdgeInsets.only(top: 7), child: SizedBox(width: double.infinity, height: 49, child: ElevatedButton.icon(onPressed: onTap, icon: Icon(icon, size: 20), label: Text(label, style: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: .5)), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8A4B22), foregroundColor: Colors.white, elevation: 4, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)))));
+    return Padding(
+      padding: const EdgeInsets.only(top: 7),
+      child: SizedBox(
+        width: double.infinity,
+        height: 49,
+        child: ElevatedButton.icon(
+          onPressed: onTap,
+          icon: Icon(icon, size: 20),
+          label: Text(
+            label,
+            style: const TextStyle(
+              fontWeight: FontWeight.w900,
+              letterSpacing: .5,
+            ),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF8A4B22),
+            foregroundColor: Colors.white,
+            elevation: 4,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
