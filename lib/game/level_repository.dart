@@ -3,15 +3,18 @@ import 'dart:math';
 import 'level_data.dart';
 import 'sorting_item.dart';
 
-/// Flutter equivalent of the Unity project's LevelData + LevelDataHolder.
+/// Flutter representation of the authored Unity LevelData set.
 ///
-/// Level definitions stay separate from progression. Each board is generated
-/// deterministically and in matching layers, so there is always at least one
-/// complete triple available until every item has been cleared.
+/// The Unity project contains five LevelData assets (internal IDs 0..4).
+/// LevelManager selects them with modulo, so Flutter uses the exact same
+/// mapping: UI level 1 -> Unity LevelData 0, UI level 2 -> LevelData 1, etc.
+/// The board generator keeps that authored five-level progression while
+/// expanding it deterministically to the app's 2,500 playable levels.
 class LevelRepository {
   LevelRepository._();
 
   static const int maxLevel = 2500;
+  static const int unityLevelDefinitionCount = 5;
 
   static const _productAssets = <String>[
     'assets/images/products/apple.svg',
@@ -23,19 +26,23 @@ class LevelRepository {
     'assets/images/products/shampoo.svg',
   ];
 
-  static SortingLevel getLevel(int level) {
+  /// Unity's LevelManager uses `_levelId % levels.Length`.
+  /// With five LevelData assets, UI levels map 1..5 -> 0..4 and then repeat.
+  static int unityDefinitionIndex(int level) {
     if (level < 1 || level > maxLevel) {
       throw ArgumentError.value(level, 'level', 'Must be between 1 and 2500');
     }
+    return (level - 1) % unityLevelDefinitionCount;
+  }
 
-    final difficulty = (level - 1) / (maxLevel - 1);
+  static SortingLevel getLevel(int level) {
+    final unityIndex = unityDefinitionIndex(level);
     final random = Random(49157 + level * 7919);
     final shelfCount = _shelfCount(level);
     final maxStackDepth = _stackDepth(level);
     final itemTypes = _itemTypes(level);
-    final capacity = shelfCount * maxStackDepth;
     final groups = min(
-      (capacity - _emptySlots(level)) ~/ 3,
+      (shelfCount * maxStackDepth - _emptySlots(level)) ~/ 3,
       _groupCount(level, shelfCount),
     );
 
@@ -47,9 +54,6 @@ class LevelRepository {
     final shelves = List.generate(shelfCount, (_) => <_Placed>[]);
     final shelfIndices = List<int>.generate(shelfCount, (index) => index);
 
-    // A layer contains one or two complete triples on different shelves.
-    // Removing the top layer exposes the next one, which gives every board a
-    // deterministic solution while still allowing the shelf layout to vary.
     var groupIndex = 0;
     var layer = 0;
     while (groupIndex < products.length) {
@@ -65,15 +69,9 @@ class LevelRepository {
         final selectedShelves = available.sublist(base, base + 3);
 
         for (final shelf in selectedShelves) {
-          shelves[shelf].add(
-            _Placed(
-              productId: product,
-              layer: layer,
-            ),
-          );
+          shelves[shelf].add(_Placed(productId: product, layer: layer));
         }
       }
-
       layer++;
       if (layer > maxStackDepth) {
         throw StateError('Unable to place generated level $level');
@@ -85,7 +83,6 @@ class LevelRepository {
       for (final placed in shelves[shelfIndex]) {
         items.add(
           SortingItem(
-            // Layer + shelf uniquely identifies every authored board item.
             itemId: level * 100000 + placed.layer * 100 + shelfIndex,
             productId: placed.productId,
             asset: _productAssets[placed.productId],
@@ -104,16 +101,20 @@ class LevelRepository {
 
     return SortingLevel(
       levelNumber: level,
-      difficulty: difficulty,
+      difficulty: (level - 1) / (maxLevel - 1),
       itemTypes: itemTypes,
       shelfCount: shelfCount,
       maxStackDepth: maxStackDepth,
       emptySlots: _emptySlots(level),
-      complexity: difficulty,
-      timerSeconds: _timerSeconds(level),
+      complexity: (level - 1) / (maxLevel - 1),
+      timerSeconds: _unityTimers[unityIndex],
       items: List.unmodifiable(items),
     );
   }
+
+  // Exact timers from Unity LevelData 0..4:
+  // 0 = 60s, 1 = 300s, 2 = 315s, 3 = 330s, 4 = 360s.
+  static const _unityTimers = <int>[60, 300, 315, 330, 360];
 
   static int _itemTypes(int level) {
     if (level <= 10) return 3;
@@ -149,18 +150,6 @@ class LevelRepository {
   }
 
   static int _groupsPerLayer(int shelfCount) => shelfCount >= 6 ? 2 : 1;
-
-  static int _timerSeconds(int level) {
-    // Unity's first level does not start a timer; later level data contains a
-    // timer budget. These are the Flutter equivalents of that level data.
-    if (level == 1) return 0;
-    if (level <= 5) return 60;
-    if (level <= 20) return 120;
-    if (level <= 75) return 180;
-    if (level <= 200) return 240;
-    if (level <= 500) return 300;
-    return 360;
-  }
 
   static List<String> get productAssets => List.unmodifiable(_productAssets);
 }
