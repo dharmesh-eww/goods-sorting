@@ -3,10 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import 'main.dart';
-
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+  const SplashScreen({super.key, required this.onFinished});
+
+  final VoidCallback onFinished;
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -28,10 +28,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     _timer = Timer(const Duration(milliseconds: 2500), () {
       if (!mounted) return;
-
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-      );
+      widget.onFinished();
     });
   }
 
@@ -93,10 +90,7 @@ class _SplashScreenState extends State<SplashScreen>
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: .94),
                       shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.white,
-                        width: 4,
-                      ),
+                      border: Border.all(color: Colors.white, width: 4),
                       boxShadow: const [
                         BoxShadow(
                           blurRadius: 18,
@@ -138,9 +132,7 @@ class _SplashScreenState extends State<SplashScreen>
                       child: const LinearProgressIndicator(
                         minHeight: 7,
                         backgroundColor: Color(0x55FFFFFF),
-                        valueColor: AlwaysStoppedAnimation(
-                          Color(0xFFFFA914),
-                        ),
+                        valueColor: AlwaysStoppedAnimation(Color(0xFFFFA914)),
                       ),
                     ),
                   ),
