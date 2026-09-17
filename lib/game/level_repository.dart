@@ -5,12 +5,9 @@ import 'sorting_item.dart';
 
 /// Flutter equivalent of the Unity project's LevelData + LevelDataHolder.
 ///
-/// The Unity project stores a finite set of authored LevelData assets and the
-/// LevelManager selects one from the holder. Here the same separation is kept
-/// in code: the repository owns the level definition and the game screen only
-/// consumes it. The generated board is deterministic and is constructed from
-/// a valid reverse-play sequence, so every returned level has a guaranteed
-/// solution.
+/// Level definitions stay separate from progression. Each board is
+/// deterministic and is constructed from a valid reverse-play sequence, so
+/// generated levels remain solvable instead of being arbitrary random boards.
 class LevelRepository {
   LevelRepository._();
 
@@ -45,20 +42,21 @@ class LevelRepository {
     final productIds = List<int>.generate(groups, (index) => index % itemTypes);
     productIds.shuffle(random);
 
-    // Build a valid play order. Each product occurs once in each round, which
-    // keeps matches spread across the board instead of placing AAA together.
+    // Each matching group is emitted once per round. This deliberately
+    // spreads the three copies through the board instead of creating AAA
+    // stacks, while retaining a guaranteed solution sequence.
     final playOrder = <int>[];
     for (var round = 0; round < 3; round++) {
-      for (var group = 0; group < productIds.length; group++) {
-        final product = productIds[group];
-        final rotated = (product + round + level + group) % itemTypes;
-        playOrder.add(rotated);
+      for (final product in productIds) {
+        playOrder.add(product);
       }
     }
 
     final shelves = List.generate(shelfCount, (_) => <_Placed>[]);
     final shelfOrder = List<int>.generate(shelfCount, (index) => index);
 
+    // Store the inverse of the valid play sequence: the first playable item
+    // sits on top and later moves sit underneath it.
     for (var index = 0; index < playOrder.length; index++) {
       shelfOrder.shuffle(random);
       var placed = false;
@@ -89,7 +87,6 @@ class LevelRepository {
             itemId: level * 100000 + placed.itemId,
             productId: placed.productId,
             asset: _productAssets[placed.productId],
-            // The first item in the valid play sequence must be on top.
             stackIndex: shelf.length - orderIndex - 1,
             shelfIndex: shelfIndex,
           ),
@@ -150,8 +147,8 @@ class LevelRepository {
   }
 
   static int _timerSeconds(int level) {
-    // Mirrors the Unity project's authored timer progression: level 1 has no
-    // timer, then later boards receive progressively larger time budgets.
+    // Unity's first level does not start a timer; later level data contains a
+    // timer budget. These are the Flutter equivalents of that level data.
     if (level == 1) return 0;
     if (level <= 5) return 60;
     if (level <= 20) return 120;
