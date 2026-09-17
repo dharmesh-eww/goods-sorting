@@ -9,6 +9,7 @@ class SortingLevel {
     required this.maxStackDepth,
     required this.emptySlots,
     required this.complexity,
+    required this.timerSeconds,
     required this.items,
   });
 
@@ -19,6 +20,7 @@ class SortingLevel {
   final int maxStackDepth;
   final int emptySlots;
   final double complexity;
+  final int timerSeconds;
   final List<SortingItem> items;
 
   int get totalItems => items.length;
