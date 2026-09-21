@@ -118,11 +118,27 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
 
   void _tapItem(SortingItem item) {
     if (paused || gameOver) return;
-    final targetIndex = trays.indexWhere((tray) => tray.length < itemsPerTray);
+
+    // Tapping a shelf item places it into the existing tray that already
+    // contains the same product when possible. Otherwise use the first tray
+    // with an empty slot. The trays themselves remain independent, and every
+    // item already inside a tray can be dragged to another tray.
+    final matchingTrayIndex = trays.indexWhere(
+      (tray) =>
+          tray.length < itemsPerTray &&
+          tray.any((trayItem) => trayItem.productId == item.productId),
+    );
+    final emptyTrayIndex = trays.indexWhere(
+      (tray) => tray.length < itemsPerTray,
+    );
+    final targetIndex =
+        matchingTrayIndex >= 0 ? matchingTrayIndex : emptyTrayIndex;
+
     if (targetIndex == -1) {
       _toast('All trays are full');
       return;
     }
+
     _moveItemToTray(item, targetIndex);
   }
 
