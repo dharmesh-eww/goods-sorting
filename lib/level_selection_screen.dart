@@ -305,7 +305,7 @@ class _JourneyHeader extends StatelessWidget {
                       borderRadius: BorderRadius.circular(10),
                       child: LinearProgressIndicator(
                         minHeight: 7,
-                        value: unlocked \/ LevelProgress.maxLevel,
+                        value: unlocked / LevelProgress.maxLevel,
                         backgroundColor: const Color(0xFFE2C79F),
                         valueColor: const AlwaysStoppedAnimation(
                           Color(0xFFFFA914),
