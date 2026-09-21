@@ -116,6 +116,16 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
     });
   }
 
+  void _tapItem(SortingItem item) {
+    if (paused || gameOver) return;
+    final targetIndex = trays.indexWhere((tray) => tray.length < itemsPerTray);
+    if (targetIndex == -1) {
+      _toast('All trays are full');
+      return;
+    }
+    _moveItemToTray(item, targetIndex);
+  }
+
   void _moveItemToTray(SortingItem item, int trayIndex) {
     if (paused || gameOver || trayIndex < 0 || trayIndex >= trays.length) return;
     final target = trays[trayIndex];
@@ -208,7 +218,7 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
     setState(() {
       if (move.fromTray >= 0) {
         final source = trays[move.fromTray];
-        final insertIndex = move.fromIndex.clamp(0, source.length);
+        final insertIndex = move.fromIndex.clamp(0, source.length).toInt();
         source.insert(insertIndex, move.item);
       } else {
         removed.remove(move.item);
@@ -666,6 +676,7 @@ class _SortingTrays extends StatelessWidget {
 }
 
 class _SortingTray extends StatelessWidget {
+  static const itemsPerTray = 3;
   const _SortingTray({required this.index, required this.items, required this.onDrop});
   final int index;
   final List<SortingItem> items;
