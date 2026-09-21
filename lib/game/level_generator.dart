@@ -7,7 +7,7 @@ import 'level_repository.dart';
 /// progression separate in the same way as the Unity LevelData/LevelManager
 /// architecture.
 class LevelGenerator {
-  static const products = LevelRepository.productAssets;
+  static final products = LevelRepository.productAssets;
 
   static SortingLevel generate(int level) => LevelRepository.getLevel(level);
 }
