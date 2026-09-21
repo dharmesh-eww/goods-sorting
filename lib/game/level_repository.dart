@@ -3,13 +3,13 @@ import 'dart:math';
 import 'level_data.dart';
 import 'sorting_item.dart';
 
-/// Flutter representation of the authored Unity LevelData set.
+/// Deterministic Flutter representation of the authored Unity level system.
 ///
-/// The Unity project contains five LevelData assets (internal IDs 0..4).
-/// LevelManager selects them with modulo, so Flutter uses the exact same
-/// mapping: UI level 1 -> Unity LevelData 0, UI level 2 -> LevelData 1, etc.
-/// The board generator keeps that authored five-level progression while
-/// expanding it deterministically to the app's 2,500 playable levels.
+/// Unity provides five LevelData definitions and selects them with modulo.
+/// Flutter preserves that timer mapping while generating the playable board
+/// deterministically. Every generated product exists in complete groups of
+/// three, and each stack layer is arranged so the currently accessible items
+/// can always be resolved as triples.
 class LevelRepository {
   LevelRepository._();
 
@@ -27,10 +27,14 @@ class LevelRepository {
   ];
 
   /// Unity's LevelManager uses `_levelId % levels.Length`.
-  /// With five LevelData assets, UI levels map 1..5 -> 0..4 and then repeat.
+  /// UI levels 1..5 therefore map to Unity LevelData 0..4.
   static int unityDefinitionIndex(int level) {
     if (level < 1 || level > maxLevel) {
-      throw ArgumentError.value(level, 'level', 'Must be between 1 and 2500');
+      throw ArgumentError.value(
+        level,
+        'level',
+        'Must be between 1 and 2500',
+      );
     }
     return (level - 1) % unityLevelDefinitionCount;
   }
@@ -41,24 +45,46 @@ class LevelRepository {
     final shelfCount = _shelfCount(level);
     final maxStackDepth = _stackDepth(level);
     final itemTypes = _itemTypes(level);
-    final groups = min(
-      (shelfCount * maxStackDepth - _emptySlots(level)) ~/ 3,
-      _groupCount(level, shelfCount),
+    final groupsPerLayer = _groupsPerLayer(shelfCount);
+
+    // A group is always exactly three matching products. The number of
+    // groups grows with stack depth, giving early levels a compact board
+    // while preserving enough layers to make the puzzle progressively deeper.
+    final maxGroups = (shelfCount * maxStackDepth) ~/ 3;
+    final groupCount = min(
+      maxGroups,
+      max(3, maxStackDepth * groupsPerLayer),
     );
 
     final products = List<int>.generate(
-      groups,
-      (index) => index % itemTypes,
-    )..shuffle(random);
+      groupCount,
+      (index) => (index + level + random.nextInt(itemTypes)) % itemTypes,
+    );
+
+    // Avoid adjacent groups using the same product when possible. This keeps
+    // the early board visually varied without breaking the triple guarantee.
+    products.shuffle(random);
+    for (var i = 1; i < products.length; i++) {
+      if (products[i] == products[i - 1] && itemTypes > 1) {
+        final swap = products.indexWhere(
+          (product) => product != products[i - 1],
+          i + 1,
+        );
+        if (swap >= 0) {
+          final value = products[i];
+          products[i] = products[swap];
+          products[swap] = value;
+        }
+      }
+    }
 
     final shelves = List.generate(shelfCount, (_) => <_Placed>[]);
     final shelfIndices = List<int>.generate(shelfCount, (index) => index);
 
     var groupIndex = 0;
-    var layer = 0;
-    while (groupIndex < products.length) {
+    for (var layer = 0; groupIndex < products.length; layer++) {
       final groupsThisLayer = min(
-        _groupsPerLayer(shelfCount),
+        groupsPerLayer,
         products.length - groupIndex,
       );
       final available = List<int>.from(shelfIndices)..shuffle(random);
@@ -69,12 +95,10 @@ class LevelRepository {
         final selectedShelves = available.sublist(base, base + 3);
 
         for (final shelf in selectedShelves) {
-          shelves[shelf].add(_Placed(productId: product, layer: layer));
+          shelves[shelf].add(
+            _Placed(productId: product, layer: layer),
+          );
         }
-      }
-      layer++;
-      if (layer > maxStackDepth) {
-        throw StateError('Unable to place generated level $level');
       }
     }
 
@@ -105,7 +129,7 @@ class LevelRepository {
       itemTypes: itemTypes,
       shelfCount: shelfCount,
       maxStackDepth: maxStackDepth,
-      emptySlots: _emptySlots(level),
+      emptySlots: maxGroups - groupCount,
       complexity: (level - 1) / (maxLevel - 1),
       timerSeconds: _unityTimers[unityIndex],
       items: List.unmodifiable(items),
@@ -140,13 +164,6 @@ class LevelRepository {
     if (level <= 200) return 7;
     if (level <= 500) return 8;
     return 9;
-  }
-
-  static int _emptySlots(int level) => level <= 50 ? 3 : 2;
-
-  static int _groupCount(int level, int shelfCount) {
-    final base = 3 + (level ~/ 90);
-    return min(shelfCount + 4, base);
   }
 
   static int _groupsPerLayer(int shelfCount) => shelfCount >= 6 ? 2 : 1;
