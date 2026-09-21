@@ -206,7 +206,7 @@ class _TopBar extends StatelessWidget {
                   ),
                   const Spacer(),
                   Text(
-                    '$completed / $totalLevels',
+                    '$completed / ${LevelProgress.maxLevel}',
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w900,
@@ -305,7 +305,7 @@ class _JourneyHeader extends StatelessWidget {
                       borderRadius: BorderRadius.circular(10),
                       child: LinearProgressIndicator(
                         minHeight: 7,
-                        value: unlocked / totalLevels,
+                        value: unlocked \/ LevelProgress.maxLevel,
                         backgroundColor: const Color(0xFFE2C79F),
                         valueColor: const AlwaysStoppedAnimation(
                           Color(0xFFFFA914),
