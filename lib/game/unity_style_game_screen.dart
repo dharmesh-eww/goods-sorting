@@ -124,19 +124,32 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
       return;
     }
     final sourceTrayIndex = trays.indexWhere((tray) => tray.contains(item));
+    if (sourceTrayIndex == trayIndex) return;
     if (sourceTrayIndex == -1 && !_accessible(item)) {
       _toast('Move the top item first');
       return;
     }
+
+    final sourceIndex = sourceTrayIndex >= 0
+        ? trays[sourceTrayIndex].indexOf(item)
+        : -1;
+
     _startTimer();
     setState(() {
       if (sourceTrayIndex >= 0) {
-        trays[sourceTrayIndex].remove(item);
+        trays[sourceTrayIndex].removeAt(sourceIndex);
       } else {
         removed.add(item);
       }
       target.add(item);
-      history.add(_TrayMove(item: item, fromTray: sourceTrayIndex, toTray: trayIndex));
+      history.add(
+        _TrayMove(
+          item: item,
+          fromTray: sourceTrayIndex,
+          fromIndex: sourceIndex,
+          toTray: trayIndex,
+        ),
+      );
       hint = null;
       moves++;
     });
@@ -191,14 +204,18 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
     if (history.isEmpty || paused || gameOver) return;
     final move = history.removeLast();
     if (!trays[move.toTray].remove(move.item)) return;
+
     setState(() {
       if (move.fromTray >= 0) {
-        trays[move.fromTray].add(move.item);
+        final source = trays[move.fromTray];
+        final insertIndex = move.fromIndex.clamp(0, source.length);
+        source.insert(insertIndex, move.item);
       } else {
         removed.remove(move.item);
       }
       moves = math.max(0, moves - 1);
       score = math.max(0, score - 1);
+      hint = null;
     });
   }
 
@@ -798,9 +815,16 @@ class _CoinPill extends StatelessWidget {
 }
 
 class _TrayMove {
-  const _TrayMove({required this.item, required this.fromTray, required this.toTray});
+  const _TrayMove({
+    required this.item,
+    required this.fromTray,
+    required this.fromIndex,
+    required this.toTray,
+  });
+
   final SortingItem item;
   final int fromTray;
+  final int fromIndex;
   final int toTray;
 }
 
