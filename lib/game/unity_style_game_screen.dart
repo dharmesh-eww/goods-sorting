@@ -479,46 +479,203 @@ class _Progress extends StatelessWidget {
 }
 
 class _Shelf extends StatelessWidget {
-  const _Shelf({required this.number, required this.items, required this.top, required this.hint, required this.float, required this.onTap});
+  const _Shelf({
+    required this.number,
+    required this.items,
+    required this.top,
+    required this.hint,
+    required this.float,
+    required this.onTap,
+  });
+
   final int number;
   final List<SortingItem> items;
-  final SortingItem? top, hint;
+  final SortingItem? top;
+  final SortingItem? hint;
   final Animation<double> float;
   final ValueChanged<SortingItem> onTap;
 
   @override
   Widget build(BuildContext context) {
     final height = math.max(86.0, 65 + math.min(items.length, 9) * 18.0);
-    return Container(height: height, margin: const EdgeInsets.only(bottom: 8), decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF9A592C), Color(0xFF633317)], begin: Alignment.topCenter, end: Alignment.bottomCenter), borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFDFA164), width: 2), boxShadow: const [BoxShadow(color: Color(0x44000000), blurRadius: 7, offset: Offset(0, 4))]), child: Stack(children: [
-      Positioned(left: 8, right: 8, bottom: 7, child: Container(height: 12, decoration: BoxDecoration(color: const Color(0xFF43210F), borderRadius: BorderRadius.circular(8)))),
-      Positioned(left: 9, top: 7, child: Text('$number', style: const TextStyle(color: Color(0x99FFE2B5), fontWeight: FontWeight.w900, fontSize: 11))),
-      for (var i = 0; i < items.length; i++) _ShelfItem(item: items[i], top: top, hint: hint, bottom: 14 + i * 18.0, float: float, onTap: onTap),
-    ]);
+
+    return Container(
+      height: height,
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF9A592C), Color(0xFF633317)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFDFA164), width: 2),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x44000000),
+            blurRadius: 7,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            left: 8,
+            right: 8,
+            bottom: 7,
+            child: Container(
+              height: 12,
+              decoration: BoxDecoration(
+                color: const Color(0xFF43210F),
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 9,
+            top: 7,
+            child: Text(
+              '$number',
+              style: const TextStyle(
+                color: Color(0x99FFE2B5),
+                fontWeight: FontWeight.w900,
+                fontSize: 11,
+              ),
+            ),
+          ),
+          for (var i = 0; i < items.length; i++)
+            _ShelfItem(
+              item: items[i],
+              top: top,
+              hint: hint,
+              bottom: 14 + i * 18.0,
+              float: float,
+              onTap: onTap,
+            ),
+        ],
+      ),
+    );
   }
 }
 
 class _ShelfItem extends StatelessWidget {
-  const _ShelfItem({required this.item, required this.top, required this.hint, required this.bottom, required this.float, required this.onTap});
+  const _ShelfItem({
+    required this.item,
+    required this.top,
+    required this.hint,
+    required this.bottom,
+    required this.float,
+    required this.onTap,
+  });
+
   final SortingItem item;
-  final SortingItem? top, hint;
+  final SortingItem? top;
+  final SortingItem? hint;
   final double bottom;
   final Animation<double> float;
   final ValueChanged<SortingItem> onTap;
 
   @override
-  Widget build(BuildContext context) => AnimatedBuilder(animation: float, builder: (_, __) {
-    final accessible = item == top;
-    final y = accessible ? math.sin(float.value * math.pi) * 2 : 0;
-    return Positioned(left: 22, right: 22, bottom: bottom + y, child: GestureDetector(onTap: accessible ? () => onTap(item) : null, child: Container(height: 58, padding: const EdgeInsets.all(4), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: item == hint ? const Color(0xFFFFD22E) : const Color(0xFFE2C39F), width: item == hint ? 3 : 2), boxShadow: [BoxShadow(color: item == hint ? const Color(0x88FFD22E) : const Color(0x55000000), blurRadius: item == hint ? 12 : 5, offset: const Offset(0, 3))]), child: Opacity(opacity: accessible ? 1 : .72, child: SvgPicture.asset(item.asset)))));
-  });
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: float,
+      builder: (_, __) {
+        final accessible = item == top;
+        final y = accessible ? math.sin(float.value * math.pi) * 2 : 0;
+
+        return Positioned(
+          left: 22,
+          right: 22,
+          bottom: bottom + y,
+          child: GestureDetector(
+            onTap: accessible ? () => onTap(item) : null,
+            child: Container(
+              height: 58,
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: item == hint
+                      ? const Color(0xFFFFD22E)
+                      : const Color(0xFFE2C39F),
+                  width: item == hint ? 3 : 2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: item == hint
+                        ? const Color(0x88FFD22E)
+                        : const Color(0x55000000),
+                    blurRadius: item == hint ? 12 : 5,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Opacity(
+                opacity: accessible ? 1 : .72,
+                child: SvgPicture.asset(item.asset),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
 class _Tray extends StatelessWidget {
   const _Tray({required this.items, required this.onTap});
+
   final List<SortingItem> items;
   final ValueChanged<SortingItem> onTap;
+
   @override
-  Widget build(BuildContext context) => Container(margin: const EdgeInsets.fromLTRB(10, 0, 10, 4), padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: const Color(0xEE5A3018), borderRadius: BorderRadius.circular(19), border: Border.all(color: const Color(0xFFDDA05A), width: 2)), child: Row(children: List.generate(7, (i) => Expanded(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 3), child: AspectRatio(aspectRatio: 1, child: i < items.length ? GestureDetector(onTap: () => onTap(items[i]), child: Container(padding: const EdgeInsets.all(3), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(11)), child: SvgPicture.asset(items[i].asset))) : DecoratedBox(decoration: BoxDecoration(color: const Color(0x55200E07), borderRadius: BorderRadius.circular(11), border: Border.all(color: const Color(0x663A190A)))))))));
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(10, 0, 10, 4),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: const Color(0xEE5A3018),
+        borderRadius: BorderRadius.circular(19),
+        border: Border.all(color: const Color(0xFFDDA05A), width: 2),
+      ),
+      child: Row(
+        children: List.generate(
+          7,
+          (i) => Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 3),
+              child: AspectRatio(
+                aspectRatio: 1,
+                child: i < items.length
+                    ? GestureDetector(
+                        onTap: () => onTap(items[i]),
+                        child: Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(11),
+                          ),
+                          child: SvgPicture.asset(items[i].asset),
+                        ),
+                      )
+                    : DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: const Color(0x55200E07),
+                          borderRadius: BorderRadius.circular(11),
+                          border: Border.all(
+                            color: const Color(0x663A190A),
+                          ),
+                        ),
+                      ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _Actions extends StatelessWidget {
@@ -537,9 +694,34 @@ class _SmallAction extends StatelessWidget {
 }
 
 class _CircleButton extends StatelessWidget {
-  const _CircleButton(this.icon, this.onTap); final IconData icon; final VoidCallback onTap;
+  const _CircleButton(this.icon, this.onTap);
+
+  final IconData icon;
+  final VoidCallback onTap;
+
   @override
-  Widget build(BuildContext context) => GestureDetector(onTap: onTap, child: Container(width: 48, height: 48, decoration: BoxDecoration(color: const Color(0xFFF9E4BD), shape: BoxShape.circle, border: Border.all(color: const Color(0xFFD0924E)), boxShadow: const [BoxShadow(color: Color(0x44000000), blurRadius: 5, offset: Offset(0, 3))]), child: Icon(icon, color: const Color(0xFF713A18)));
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF9E4BD),
+          shape: BoxShape.circle,
+          border: Border.all(color: const Color(0xFFD0924E)),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x44000000),
+              blurRadius: 5,
+              offset: Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Icon(icon, color: const Color(0xFF713A18)),
+      ),
+    );
+  }
 }
 
 class _CoinPill extends StatelessWidget {
@@ -549,23 +731,154 @@ class _CoinPill extends StatelessWidget {
 }
 
 class _ResultPanel extends StatelessWidget {
-  const _ResultPanel({required this.win, required this.level, required this.score, required this.moves, required this.earned, required this.timedOut, required this.onPrimary, required this.onLevels});
-  final bool win, timedOut; final int level, score, moves, earned; final VoidCallback onPrimary, onLevels;
+  const _ResultPanel({
+    required this.win,
+    required this.level,
+    required this.score,
+    required this.moves,
+    required this.earned,
+    required this.timedOut,
+    required this.onPrimary,
+    required this.onLevels,
+  });
+
+  final bool win;
+  final bool timedOut;
+  final int level;
+  final int score;
+  final int moves;
+  final int earned;
+  final VoidCallback onPrimary;
+  final VoidCallback onLevels;
+
   @override
-  Widget build(BuildContext context) => Material(color: Colors.transparent, child: Center(child: Padding(padding: const EdgeInsets.all(24), child: Container(width: double.infinity, padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: const Color(0xFFFFE8BC), borderRadius: BorderRadius.circular(29), border: Border.all(color: const Color(0xFFD18A43), width: 2), boxShadow: const [BoxShadow(color: Color(0x99000000), blurRadius: 20, offset: Offset(0, 10))]), child: Column(mainAxisSize: MainAxisSize.min, children: [
-    Container(width: 82, height: 82, decoration: BoxDecoration(color: win ? const Color(0xFFFFB52E) : const Color(0xFFE66E43), shape: BoxShape.circle), child: Icon(win ? Icons.emoji_events_rounded : Icons.close_rounded, size: 50, color: Colors.white)),
-    const SizedBox(height: 12),
-    Text(win ? 'LEVEL COMPLETE!' : 'LEVEL FAILED', textAlign: TextAlign.center, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Color(0xFF653918))),
-    const SizedBox(height: 5),
-    Text(win ? 'Great sorting! The shelf is clean.' : timedOut ? 'Time is up. Try again.' : 'The tray is full. Try another order.', textAlign: TextAlign.center, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF8B5B36))),
-    if (win) const Padding(padding: EdgeInsets.only(top: 10), child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.star_rounded, size: 34, color: Color(0xFFFFB51D)), SizedBox(width: 4), Icon(Icons.star_rounded, size: 43, color: Color(0xFFFFB51D)), SizedBox(width: 4), Icon(Icons.star_rounded, size: 34, color: Color(0xFFFFB51D))])),
-    const SizedBox(height: 14),
-    Row(children: [_Stat('LEVEL', '$level'), _Stat('SCORE', '$score'), _Stat('MOVES', '$moves')]),
-    if (win) Padding(padding: const EdgeInsets.only(top: 11), child: Text('+$earned COINS', style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF80400A))),),
-    const SizedBox(height: 16),
-    _WideButton(win ? 'NEXT' : 'TRY AGAIN', win ? Icons.arrow_forward_rounded : Icons.refresh_rounded, onPrimary),
-    TextButton(onPressed: onLevels, child: const Text('LEVELS', style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF754522)))),
-  ]))));
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFE8BC),
+              borderRadius: BorderRadius.circular(29),
+              border: Border.all(
+                color: const Color(0xFFD18A43),
+                width: 2,
+              ),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x99000000),
+                  blurRadius: 20,
+                  offset: Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 82,
+                  height: 82,
+                  decoration: BoxDecoration(
+                    color: win
+                        ? const Color(0xFFFFB52E)
+                        : const Color(0xFFE66E43),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    win
+                        ? Icons.emoji_events_rounded
+                        : Icons.close_rounded,
+                    size: 50,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  win ? 'LEVEL COMPLETE!' : 'LEVEL FAILED',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF653918),
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  win
+                      ? 'Great sorting! The shelf is clean.'
+                      : timedOut
+                          ? 'Time is up. Try again.'
+                          : 'The tray is full. Try another order.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF8B5B36),
+                  ),
+                ),
+                if (win)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 10),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.star_rounded,
+                            size: 34, color: Color(0xFFFFB51D)),
+                        SizedBox(width: 4),
+                        Icon(Icons.star_rounded,
+                            size: 43, color: Color(0xFFFFB51D)),
+                        SizedBox(width: 4),
+                        Icon(Icons.star_rounded,
+                            size: 34, color: Color(0xFFFFB51D)),
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    _Stat('LEVEL', '$level'),
+                    _Stat('SCORE', '$score'),
+                    _Stat('MOVES', '$moves'),
+                  ],
+                ),
+                if (win)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 11),
+                    child: Text(
+                      '+$earned COINS',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF80400A),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 16),
+                _WideButton(
+                  win ? 'NEXT' : 'TRY AGAIN',
+                  win ? Icons.arrow_forward_rounded : Icons.refresh_rounded,
+                  onPrimary,
+                ),
+                TextButton(
+                  onPressed: onLevels,
+                  child: const Text(
+                    'LEVELS',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF754522),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _Stat extends StatelessWidget {
