@@ -39,7 +39,7 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
 
   late final level = LevelGenerator.generate(widget.levelNumber);
   final removed = <SortingItem>{};
-  final history = <_TrayMove>[];
+  final history = <SortingItem>[];
   Timer? timer;
 
   int secondsLeft = 0;
@@ -57,8 +57,6 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
   void initState() {
     super.initState();
     secondsLeft = level.timerSeconds;
-    final trayCount = (level.totalItems + itemsPerTray - 1) ~/ itemsPerTray + extraTrays;
-    trays.addAll(List.generate(trayCount, (_) => <SortingItem>[]));
     _loadCoins();
   }
 
@@ -119,6 +117,7 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
     setState(() {
       removed.add(item);
       hint = null;
+      history.add(item);
       moves++;
       score += 10;
     });
@@ -137,7 +136,7 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
       if (!mounted || gameOver) return;
       setState(() {
         score += 20;
-        history.removeWhere((move) => triple.contains(move.item));
+        history.removeWhere(triple.contains);
       });
       _checkWin();
     });
@@ -151,8 +150,8 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
 
   void _undo() {
     if (history.isEmpty || paused || gameOver) return;
-    final move = history.removeLast();
-    if (!removed.remove(move.item)) return;
+    final item = history.removeLast();
+    if (!removed.remove(item)) return;
 
     setState(() {
       moves = math.max(0, moves - 1);
@@ -217,9 +216,6 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
   void _reset() {
     timer?.cancel();
     setState(() {
-      for (final tray in trays) {
-        tray.clear();
-      }
       removed.clear();
       history.clear();
       _runtimeItems = null;
