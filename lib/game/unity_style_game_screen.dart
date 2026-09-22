@@ -86,21 +86,6 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
   }
 
   void _startTimer() {
-    final source = _runtimeItems ?? level.items;
-    return List.generate(
-      level.shelfCount,
-      (shelf) => source
-          .where((x) => x.shelfIndex == shelf && !removed.contains(x))
-          .toList()
-        ..sort((a, b) => a.stackIndex.compareTo(b.stackIndex)),
-    );
-  }
-
-  SortingItem? _top(List<SortingItem> items) => items.isEmpty
-      ? null
-      : items.reduce((a, b) => a.stackIndex > b.stackIndex ? a : b);
-
-  void _startTimer() {
     if (level.timerSeconds == 0 || timerStarted || paused || gameOver) return;
     timerStarted = true;
     timer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -335,7 +320,6 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
 
   @override
   Widget build(BuildContext context) {
-    final board = _runtimeShelves;
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -406,6 +390,13 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
         ),
       ),
     );
+  }
+
+  int? _findTray(SortingItem item) {
+    for (var i = 0; i < trays.length; i++) {
+      if (trays[i].contains(item)) return i;
+    }
+    return null;
   }
 
   void _showPause() {
