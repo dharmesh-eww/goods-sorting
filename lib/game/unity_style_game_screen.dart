@@ -21,17 +21,9 @@ class UnityStyleGameScreen extends StatefulWidget {
   State<UnityStyleGameScreen> createState() => _UnityStyleGameScreenState();
 }
 
-class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
-    with TickerProviderStateMixin {
-
-  late final _intro = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 600),
-  )..forward();
-  late final _match = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 350),
-  );
+class _UnityStyleGameScreenState extends State<UnityStyleGameScreen> with TickerProviderStateMixin {
+  late final _intro = AnimationController(vsync: this, duration: const Duration(milliseconds: 600))..forward();
+  late final _match = AnimationController(vsync: this, duration: const Duration(milliseconds: 350));
 
   late final level = LevelGenerator.generate(widget.levelNumber);
   Timer? timer;
@@ -107,13 +99,9 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
     setState(() {
       trays[fromTray][fromPosition] = null;
       trays[toTray][toPosition] = item;
-      history.add(_TrayMove(
-        item: item,
-        fromTray: fromTray,
-        fromPosition: fromPosition,
-        toTray: toTray,
-        toPosition: toPosition,
-      ));
+      history.add(
+        _TrayMove(item: item, fromTray: fromTray, fromPosition: fromPosition, toTray: toTray, toPosition: toPosition),
+      );
       moves++;
       score += 5;
     });
@@ -149,8 +137,7 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
   void _undo() {
     if (history.isEmpty || paused || gameOver) return;
     final move = history.removeLast();
-    if (trays[move.toTray][move.toPosition] != move.item ||
-        trays[move.fromTray][move.fromPosition] != null) {
+    if (trays[move.toTray][move.toPosition] != move.item || trays[move.fromTray][move.fromPosition] != null) {
       return;
     }
 
@@ -171,8 +158,7 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
     final spent = await GameCurrency.instance.spend(5);
     if (!spent || !mounted) return;
 
-    final items = trays.expand((tray) => tray).toList()
-      ..shuffle(math.Random(widget.levelNumber * 37 + moves));
+    final items = trays.expand((tray) => tray).toList()..shuffle(math.Random(widget.levelNumber * 37 + moves));
 
     final shuffled = List.generate(trayCount, (_) => <SortingItem?>[null, null, null]);
     var slot = 0;
@@ -221,13 +207,9 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
     }
 
     if (source == null) {
-      final empty = trays.indexWhere(
-        (tray) => tray.every((item) => item == null),
-      );
+      final empty = trays.indexWhere((tray) => tray.every((item) => item == null));
       if (empty >= 0) {
-        source = trays.indexWhere(
-          (tray) => tray.any((item) => item != null),
-        );
+        source = trays.indexWhere((tray) => tray.any((item) => item != null));
         target = empty;
       }
     }
@@ -291,11 +273,7 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
           if (win && widget.levelNumber < 2500) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(
-                builder: (_) => UnityStyleGameScreen(
-                  levelNumber: widget.levelNumber + 1,
-                ),
-              ),
+              MaterialPageRoute(builder: (_) => UnityStyleGameScreen(levelNumber: widget.levelNumber + 1)),
             );
           } else if (!win) {
             _reset();
@@ -320,10 +298,7 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: Text(
-            text,
-            style: const TextStyle(fontWeight: FontWeight.w800),
-          ),
+          content: Text(text, style: const TextStyle(fontWeight: FontWeight.w800)),
           behavior: SnackBarBehavior.floating,
           duration: const Duration(milliseconds: 900),
         ),
@@ -338,11 +313,7 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF24140D),
-              Color(0xFF5A3019),
-              Color(0xFFC77A35),
-            ],
+            colors: [Color(0xFF24140D), Color(0xFF5A3019), Color(0xFFC77A35)],
           ),
         ),
         child: Stack(
@@ -350,81 +321,63 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
             const Positioned.fill(child: IgnorePointer(child: _ShelfBackdrop())),
             SafeArea(
               child: Column(
-            children: [
-              _TopPanel(
-                level: widget.levelNumber,
-                seconds: secondsLeft,
-                totalSeconds: level.timerSeconds,
-                coins: coins,
-                onBack: () => Navigator.pop(context),
-                onPause: () => _showPause(),
-              ),
-              _Progress(
-                remaining: trays.fold<int>(
-                  0,
-                  (sum, tray) =>
-                      sum + tray.whereType<SortingItem>().length,
-                ),
-                total: level.totalItems,
-              ),
-              Expanded(
-                child: AnimatedBuilder(
-                  animation: _intro,
-                  builder: (_, child) => Transform.translate(
-                    offset: Offset(0, 20 * (1 - _intro.value)),
-                    child: Opacity(opacity: _intro.value, child: child),
+                children: [
+                  _TopPanel(
+                    level: widget.levelNumber,
+                    seconds: secondsLeft,
+                    totalSeconds: level.timerSeconds,
+                    coins: coins,
+                    onBack: () => Navigator.pop(context),
+                    onPause: () => _showPause(),
                   ),
-                  child: GridView.builder(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
-                      childAspectRatio: 1.20,
-                    ),
-                    itemCount: trays.length,
-                    itemBuilder: (_, index) => _SortingTray(
-                      number: index + 1,
-                      items: trays[index],
-                      onDrop: (item, position) {
-                        final source = _findItemPosition(item);
-                        if (source == null) return;
+                  _Progress(
+                    remaining: trays.fold<int>(0, (sum, tray) => sum + tray.whereType<SortingItem>().length),
+                    total: level.totalItems,
+                  ),
+                  Expanded(
+                    child: AnimatedBuilder(
+                      animation: _intro,
+                      builder: (_, child) => Transform.translate(
+                        offset: Offset(0, 20 * (1 - _intro.value)),
+                        child: Opacity(opacity: _intro.value, child: child),
+                      ),
+                      child: GridView.builder(
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 10,
+                          childAspectRatio: 1.20,
+                        ),
+                        itemCount: trays.length,
+                        itemBuilder: (_, index) => _SortingTray(
+                          number: index + 1,
+                          items: trays[index],
+                          onDrop: (item, position) {
+                            final source = _findItemPosition(item);
+                            if (source == null) return;
 
-                        var targetPosition = position;
-                        if (targetPosition == null) {
-                          targetPosition = trays[index].indexWhere(
-                            (slot) => slot == null,
-                          );
-                        }
+                            var targetPosition = position;
+                            if (targetPosition == null) {
+                              targetPosition = trays[index].indexWhere((slot) => slot == null);
+                            }
 
-                        if (targetPosition == null || targetPosition < 0) {
-                          _toast('Tray is full');
-                          return;
-                        }
+                            if (targetPosition == null || targetPosition < 0) {
+                              _toast('Tray is full');
+                              return;
+                            }
 
-                        _moveItem(
-                          item,
-                          source.$1,
-                          source.$2,
-                          index,
-                          targetPosition,
-                        );
-                      },
+                            _moveItem(item, source.$1, source.$2, index, targetPosition);
+                          },
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                  _Actions(moves: moves, onUndo: history.isEmpty ? null : _undo, onShuffle: _shuffle, onHint: _hint),
+                ],
               ),
-              _Actions(
-                moves: moves,
-                onUndo: history.isEmpty ? null : _undo,
-                onShuffle: _shuffle,
-                onHint: _hint,
-              ),
-            ],
-          ),
-        ),
+            ),
           ],
         ),
       ),
@@ -453,22 +406,31 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
           color: Color(0xFFFFEAC1),
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(width: 42, height: 5, decoration: BoxDecoration(
-            color: Color(0xFFC68B51), borderRadius: BorderRadius.circular(4))),
-          const SizedBox(height: 14),
-          const Text('PAUSED', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Color(0xFF653918))),
-          const SizedBox(height: 18),
-          _WideButton('RESUME', Icons.play_arrow_rounded, () {
-            Navigator.pop(sheet);
-            if (mounted) setState(() => paused = false);
-          }),
-          const SizedBox(height: 10),
-          _WideButton('RESTART', Icons.refresh_rounded, () {
-            Navigator.pop(sheet);
-            _reset();
-          }),
-        ]),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 42,
+              height: 5,
+              decoration: BoxDecoration(color: Color(0xFFC68B51), borderRadius: BorderRadius.circular(4)),
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'PAUSED',
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Color(0xFF653918)),
+            ),
+            const SizedBox(height: 18),
+            _WideButton('RESUME', Icons.play_arrow_rounded, () {
+              Navigator.pop(sheet);
+              if (mounted) setState(() => paused = false);
+            }),
+            const SizedBox(height: 10),
+            _WideButton('RESTART', Icons.refresh_rounded, () {
+              Navigator.pop(sheet);
+              _reset();
+            }),
+          ],
+        ),
       ),
     ).whenComplete(() {
       if (mounted && paused) setState(() => paused = false);
@@ -481,9 +443,7 @@ class _ShelfBackdrop extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: _ShelfBackdropPainter(),
-    );
+    return CustomPaint(painter: _ShelfBackdropPainter());
   }
 }
 
@@ -516,21 +476,9 @@ class _ShelfBackdropPainter extends CustomPainter {
 
     final glow = Paint()
       ..shader = RadialGradient(
-        colors: [
-          const Color(0x66FFD78A),
-          const Color(0x00FFD78A),
-        ],
-      ).createShader(
-        Rect.fromCircle(
-          center: Offset(size.width * .5, size.height * .24),
-          radius: size.width * .7,
-        ),
-      );
-    canvas.drawCircle(
-      Offset(size.width * .5, size.height * .24),
-      size.width * .7,
-      glow,
-    );
+        colors: [const Color(0x66FFD78A), const Color(0x00FFD78A)],
+      ).createShader(Rect.fromCircle(center: Offset(size.width * .5, size.height * .24), radius: size.width * .7));
+    canvas.drawCircle(Offset(size.width * .5, size.height * .24), size.width * .7, glow);
   }
 
   @override
@@ -569,21 +517,10 @@ class _TopPanel extends StatelessWidget {
                   colors: [Color(0xFF5F351D), Color(0xFF2C170D)],
                 ),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: const Color(0xFFE1A15D),
-                  width: 1.5,
-                ),
+                border: Border.all(color: const Color(0xFFE1A15D), width: 1.5),
                 boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x99000000),
-                    blurRadius: 10,
-                    offset: Offset(0, 5),
-                  ),
-                  BoxShadow(
-                    color: Color(0x44FFD68A),
-                    blurRadius: 2,
-                    offset: Offset(0, -1),
-                  ),
+                  BoxShadow(color: Color(0x99000000), blurRadius: 10, offset: Offset(0, 5)),
+                  BoxShadow(color: Color(0x44FFD68A), blurRadius: 2, offset: Offset(0, -1)),
                 ],
               ),
               child: Row(
@@ -592,20 +529,11 @@ class _TopPanel extends StatelessWidget {
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFFFC95B), Color(0xFFB96320)],
-                      ),
+                      gradient: const LinearGradient(colors: [Color(0xFFFFC95B), Color(0xFFB96320)]),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: const Color(0xFFFFE0A5),
-                        width: 1,
-                      ),
+                      border: Border.all(color: const Color(0xFFFFE0A5), width: 1),
                     ),
-                    child: const Icon(
-                      Icons.layers_rounded,
-                      size: 18,
-                      color: Color(0xFF4D250F),
-                    ),
+                    child: const Icon(Icons.layers_rounded, size: 18, color: Color(0xFF4D250F)),
                   ),
                   const SizedBox(width: 6),
                   Expanded(
@@ -618,13 +546,7 @@ class _TopPanel extends StatelessWidget {
                         fontWeight: FontWeight.w900,
                         color: Colors.white,
                         letterSpacing: .3,
-                        shadows: [
-                          Shadow(
-                            color: Color(0x99000000),
-                            blurRadius: 3,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
+                        shadows: [Shadow(color: Color(0x99000000), blurRadius: 3, offset: Offset(0, 2))],
                       ),
                     ),
                   ),
@@ -637,19 +559,11 @@ class _TopPanel extends StatelessWidget {
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
-                              Icons.timer_rounded,
-                              size: 15,
-                              color: Color(0xFFFFC45D),
-                            ),
+                            const Icon(Icons.timer_rounded, size: 15, color: Color(0xFFFFC45D)),
                             const SizedBox(width: 2),
                             Text(
                               _time(seconds),
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w900,
-                                color: Colors.white,
-                              ),
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Colors.white),
                             ),
                           ],
                         ),
@@ -662,9 +576,7 @@ class _TopPanel extends StatelessWidget {
                               minHeight: 4,
                               value: (seconds / totalSeconds).clamp(0, 1),
                               backgroundColor: const Color(0x663E1F0E),
-                              valueColor: const AlwaysStoppedAnimation(
-                                Color(0xFFFFA52E),
-                              ),
+                              valueColor: const AlwaysStoppedAnimation(Color(0xFFFFA52E)),
                             ),
                           ),
                         ),
@@ -709,11 +621,7 @@ class _Progress extends StatelessWidget {
             child: FractionallySizedBox(
               widthFactor: value.clamp(0, 1),
               child: const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFFFFD05A), Color(0xFFF07A21)],
-                  ),
-                ),
+                decoration: BoxDecoration(gradient: LinearGradient(colors: [Color(0xFFFFD05A), Color(0xFFF07A21)])),
               ),
             ),
           ),
@@ -740,11 +648,7 @@ class _TrayMove {
 }
 
 class _SortingTray extends StatelessWidget {
-  const _SortingTray({
-    required this.number,
-    required this.items,
-    required this.onDrop,
-  });
+  const _SortingTray({required this.number, required this.items, required this.onDrop});
 
   final int number;
   final List<SortingItem?> items;
@@ -760,12 +664,7 @@ class _SortingTray extends StatelessWidget {
 
         int? position;
         for (var index = 0; index < 3; index++) {
-          final rect = Rect.fromLTWH(
-            10 + index * 56.0,
-            36,
-            52,
-            58,
-          );
+          final rect = Rect.fromLTWH(10 + index * 56.0, 36, 52, 58);
           if (rect.contains(localOffset) && items[index] == null) {
             position = index;
             break;
@@ -775,7 +674,6 @@ class _SortingTray extends StatelessWidget {
         onDrop(details.data, position);
       },
       builder: (context, candidate, rejected) {
-        final filledCount = items.whereType<SortingItem>().length;
         return Stack(
           children: [
             Container(
@@ -783,99 +681,14 @@ class _SortingTray extends StatelessWidget {
                 gradient: const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFFD18A46),
-                    Color(0xFF7A3F1E),
-                    Color(0xFF32170C),
-                  ],
+                  colors: [Color(0xFFD18A46), Color(0xFF7A3F1E), Color(0xFF32170C)],
                 ),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: const Color(0xFFE7AE70),
-                  width: 2,
-                ),
+                border: Border.all(color: const Color(0xFFE7AE70), width: 2),
                 boxShadow: const [
-                  BoxShadow(
-                    color: Color(0xBB000000),
-                    blurRadius: 12,
-                    offset: Offset(0, 7),
-                  ),
-                  BoxShadow(
-                    color: Color(0x55FFD28A),
-                    blurRadius: 3,
-                    offset: Offset(0, -1),
-                  ),
+                  BoxShadow(color: Color(0xBB000000), blurRadius: 12, offset: Offset(0, 7)),
+                  BoxShadow(color: Color(0x55FFD28A), blurRadius: 3, offset: Offset(0, -1)),
                 ],
-              ),
-            ),
-            Positioned(
-              left: 6,
-              right: 6,
-              top: 6,
-              height: 22,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFF0B36C), Color(0xFF9A5428)],
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x55000000),
-                      blurRadius: 3,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Positioned(
-              left: 14,
-              top: 9,
-              child: Text(
-                'SHELF $number',
-                style: const TextStyle(
-                  color: Color(0xFF4A210E),
-                  fontWeight: FontWeight.w900,
-                  fontSize: 10,
-                  letterSpacing: .7,
-                ),
-              ),
-            ),
-            Positioned(
-              right: 14,
-              top: 9,
-              child: Text(
-                '$filledCount/3',
-                style: const TextStyle(
-                  color: Color(0xFFFFE7C3),
-                  fontWeight: FontWeight.w900,
-                  fontSize: 10,
-                ),
-              ),
-            ),
-            Positioned(
-              left: 8,
-              right: 8,
-              bottom: 8,
-              height: 13,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF2A1208), Color(0xFF633016)],
-                  ),
-                  borderRadius: BorderRadius.circular(7),
-                  border: Border.all(
-                    color: const Color(0xFFB76B36),
-                  ),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0xAA000000),
-                      blurRadius: 5,
-                      offset: Offset(0, 3),
-                    ),
-                  ],
-                ),
               ),
             ),
             for (var position = 0; position < 3; position++)
@@ -887,44 +700,8 @@ class _SortingTray extends StatelessWidget {
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    // Fixed position indicator. The item sits directly on
-                    // this shelf line instead of having a second "bottle
-                    // floor" rendered below it.
-                    Positioned(
-                      left: 3,
-                      right: 3,
-                      bottom: 4,
-                      height: 3,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [
-                              Color(0xFFB66A32),
-                              Color(0xFFE6A15C),
-                              Color(0xFF8A481F),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(3),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x88000000),
-                              blurRadius: 2,
-                              offset: Offset(0, 1),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
                     if (items[position] != null)
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: 5,
-                        height: 52,
-                        child: _TrayItem(
-                          item: items[position]!,
-                        ),
-                      ),
+                      Positioned(left: 0, right: 0, bottom: 5, height: 52, child: _TrayItem(item: items[position]!)),
                   ],
                 ),
               ),
@@ -947,40 +724,18 @@ class _TrayItem extends StatelessWidget {
       maxSimultaneousDrags: 1,
       feedback: Material(
         color: Colors.transparent,
-        child: Transform.scale(
-          scale: 1.12,
-          child: SizedBox(
-            width: 52,
-            height: 52,
-            child: _visual(),
-          ),
-        ),
+        child: Transform.scale(scale: 1.12, child: SizedBox(width: 52, height: 52, child: _visual())),
       ),
-      childWhenDragging: Opacity(
-        opacity: .25,
-        child: _visual(),
-      ),
+      childWhenDragging: Opacity(opacity: .25, child: _visual()),
       child: _visual(),
     );
   }
 
-  Widget _visual() => SizedBox(
-    width: 52,
-    height: 52,
-    child: SvgPicture.asset(
-      item.asset,
-      fit: BoxFit.contain,
-    ),
-  );
+  Widget _visual() => SizedBox(width: 52, height: 52, child: SvgPicture.asset(item.asset, fit: BoxFit.contain));
 }
 
 class _Actions extends StatelessWidget {
-  const _Actions({
-    required this.moves,
-    required this.onUndo,
-    required this.onShuffle,
-    required this.onHint,
-  });
+  const _Actions({required this.moves, required this.onUndo, required this.onShuffle, required this.onHint});
 
   final int moves;
   final VoidCallback? onUndo, onShuffle, onHint;
@@ -996,26 +751,14 @@ class _Actions extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF5C3017), Color(0xFF2A1409)],
-              ),
+              gradient: const LinearGradient(colors: [Color(0xFF5C3017), Color(0xFF2A1409)]),
               borderRadius: BorderRadius.circular(13),
               border: Border.all(color: const Color(0xFFB96A34)),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x66000000),
-                  blurRadius: 5,
-                  offset: Offset(0, 3),
-                ),
-              ],
+              boxShadow: const [BoxShadow(color: Color(0x66000000), blurRadius: 5, offset: Offset(0, 3))],
             ),
             child: Text(
               'MOVES $moves',
-              style: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w900,
-                color: Color(0xFFFFE5C1),
-              ),
+              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFFFFE5C1)),
             ),
           ),
           const Spacer(),
@@ -1051,13 +794,7 @@ class _SmallAction extends StatelessWidget {
             ),
             borderRadius: BorderRadius.circular(13),
             border: Border.all(color: const Color(0xFFFFE1AE)),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x88000000),
-                blurRadius: 5,
-                offset: Offset(0, 3),
-              ),
-            ],
+            boxShadow: const [BoxShadow(color: Color(0x88000000), blurRadius: 5, offset: Offset(0, 3))],
           ),
           child: Row(
             children: [
@@ -1065,11 +802,7 @@ class _SmallAction extends StatelessWidget {
               const SizedBox(width: 3),
               Text(
                 label,
-                style: const TextStyle(
-                  fontSize: 8,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF5B2A0E),
-                ),
+                style: const TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Color(0xFF5B2A0E)),
               ),
             ],
           ),
@@ -1099,17 +832,8 @@ class _CircleButton extends StatelessWidget {
             colors: [Color(0xFFFFD68A), Color(0xFFB96425)],
           ),
           shape: BoxShape.circle,
-          border: Border.all(
-            color: const Color(0xFFFFE4B7),
-            width: 1.5,
-          ),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x99000000),
-              blurRadius: 8,
-              offset: Offset(0, 5),
-            ),
-          ],
+          border: Border.all(color: const Color(0xFFFFE4B7), width: 1.5),
+          boxShadow: const [BoxShadow(color: Color(0x99000000), blurRadius: 8, offset: Offset(0, 5))],
         ),
         child: Icon(icon, color: const Color(0xFF5A2B0E)),
       ),
@@ -1133,32 +857,16 @@ class _CoinPill extends StatelessWidget {
           colors: [Color(0xFFFFE08A), Color(0xFFE99521)],
         ),
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(
-          color: const Color(0xFFFFF0B5),
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x88000000),
-            blurRadius: 4,
-            offset: Offset(0, 3),
-          ),
-        ],
+        border: Border.all(color: const Color(0xFFFFF0B5)),
+        boxShadow: const [BoxShadow(color: Color(0x88000000), blurRadius: 4, offset: Offset(0, 3))],
       ),
       child: Row(
         children: [
-          const Icon(
-            Icons.monetization_on_rounded,
-            size: 18,
-            color: Color(0xFF8D4A0D),
-          ),
+          const Icon(Icons.monetization_on_rounded, size: 18, color: Color(0xFF8D4A0D)),
           const SizedBox(width: 2),
           Text(
             '$coins',
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w900,
-              color: Color(0xFF70350D),
-            ),
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF70350D)),
           ),
         ],
       ),
@@ -1200,17 +908,8 @@ class _ResultPanel extends StatelessWidget {
             decoration: BoxDecoration(
               color: const Color(0xFFFFE8BC),
               borderRadius: BorderRadius.circular(29),
-              border: Border.all(
-                color: const Color(0xFFD18A43),
-                width: 2,
-              ),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x99000000),
-                  blurRadius: 20,
-                  offset: Offset(0, 10),
-                ),
-              ],
+              border: Border.all(color: const Color(0xFFD18A43), width: 2),
+              boxShadow: const [BoxShadow(color: Color(0x99000000), blurRadius: 20, offset: Offset(0, 10))],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1219,42 +918,26 @@ class _ResultPanel extends StatelessWidget {
                   width: 82,
                   height: 82,
                   decoration: BoxDecoration(
-                    color: win
-                        ? const Color(0xFFFFB52E)
-                        : const Color(0xFFE66E43),
+                    color: win ? const Color(0xFFFFB52E) : const Color(0xFFE66E43),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
-                    win
-                        ? Icons.emoji_events_rounded
-                        : Icons.close_rounded,
-                    size: 50,
-                    color: Colors.white,
-                  ),
+                  child: Icon(win ? Icons.emoji_events_rounded : Icons.close_rounded, size: 50, color: Colors.white),
                 ),
                 const SizedBox(height: 12),
                 Text(
                   win ? 'LEVEL COMPLETE!' : 'LEVEL FAILED',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF653918),
-                  ),
+                  style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Color(0xFF653918)),
                 ),
                 const SizedBox(height: 5),
                 Text(
                   win
                       ? 'Great sorting! The shelf is clean.'
                       : timedOut
-                          ? 'Time is up. Try again.'
-                          : 'No sorting space left. Try another order.',
+                      ? 'Time is up. Try again.'
+                      : 'No sorting space left. Try another order.',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF8B5B36),
-                  ),
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF8B5B36)),
                 ),
                 if (win)
                   const Padding(
@@ -1262,34 +945,22 @@ class _ResultPanel extends StatelessWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.star_rounded,
-                            size: 34, color: Color(0xFFFFB51D)),
+                        Icon(Icons.star_rounded, size: 34, color: Color(0xFFFFB51D)),
                         SizedBox(width: 4),
-                        Icon(Icons.star_rounded,
-                            size: 43, color: Color(0xFFFFB51D)),
+                        Icon(Icons.star_rounded, size: 43, color: Color(0xFFFFB51D)),
                         SizedBox(width: 4),
-                        Icon(Icons.star_rounded,
-                            size: 34, color: Color(0xFFFFB51D)),
+                        Icon(Icons.star_rounded, size: 34, color: Color(0xFFFFB51D)),
                       ],
                     ),
                   ),
                 const SizedBox(height: 14),
-                Row(
-                  children: [
-                    _Stat('LEVEL', '$level'),
-                    _Stat('SCORE', '$score'),
-                    _Stat('MOVES', '$moves'),
-                  ],
-                ),
+                Row(children: [_Stat('LEVEL', '$level'), _Stat('SCORE', '$score'), _Stat('MOVES', '$moves')]),
                 if (win)
                   Padding(
                     padding: const EdgeInsets.only(top: 11),
                     child: Text(
                       '+$earned COINS',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF80400A),
-                      ),
+                      style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF80400A)),
                     ),
                   ),
                 const SizedBox(height: 16),
@@ -1302,10 +973,7 @@ class _ResultPanel extends StatelessWidget {
                   onPressed: onLevels,
                   child: const Text(
                     'LEVELS',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFF754522),
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF754522)),
                   ),
                 ),
               ],
@@ -1318,29 +986,57 @@ class _ResultPanel extends StatelessWidget {
 }
 
 class _Stat extends StatelessWidget {
-  const _Stat(this.label, this.value); final String label, value;
+  const _Stat(this.label, this.value);
+  final String label, value;
   @override
-  Widget build(BuildContext context) => Expanded(child: Container(margin: const EdgeInsets.symmetric(horizontal: 3), padding: const EdgeInsets.symmetric(vertical: 8), decoration: BoxDecoration(color: const Color(0xFFF8D8A6), borderRadius: BorderRadius.circular(13)), child: Column(children: [Text(label, style: const TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Color(0xFF8B5B36))), const SizedBox(height: 2), Text(value, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Color(0xFF653918)))])));
+  Widget build(BuildContext context) => Expanded(
+    child: Container(
+      margin: const EdgeInsets.symmetric(horizontal: 3),
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(color: const Color(0xFFF8D8A6), borderRadius: BorderRadius.circular(13)),
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Color(0xFF8B5B36)),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Color(0xFF653918)),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _WideButton extends StatelessWidget {
-  const _WideButton(this.label, this.icon, this.onTap); final String label; final IconData icon; final VoidCallback onTap;
+  const _WideButton(this.label, this.icon, this.onTap);
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
   @override
-  Widget build(BuildContext context) => SizedBox(width: double.infinity, height: 54, child: ElevatedButton.icon(onPressed: onTap, icon: Icon(icon), label: Text(label, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, letterSpacing: .8)), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF19A24), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)))));
+  Widget build(BuildContext context) => SizedBox(
+    width: double.infinity,
+    height: 54,
+    child: ElevatedButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon),
+      label: Text(label, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, letterSpacing: .8)),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFFF19A24),
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+    ),
+  );
 }
 
 BoxDecoration _box() => BoxDecoration(
-  gradient: const LinearGradient(
-    colors: [Color(0xFF5F351D), Color(0xFF2C170D)],
-  ),
+  gradient: const LinearGradient(colors: [Color(0xFF5F351D), Color(0xFF2C170D)]),
   borderRadius: BorderRadius.circular(18),
   border: Border.all(color: const Color(0xFFD0924E)),
-  boxShadow: const [
-    BoxShadow(
-      color: Color(0x66000000),
-      blurRadius: 8,
-      offset: Offset(0, 4),
-    ),
-  ],
+  boxShadow: const [BoxShadow(color: Color(0x66000000), blurRadius: 8, offset: Offset(0, 4))],
 );
 String _time(int seconds) => '${seconds ~/ 60}:${(seconds % 60).toString().padLeft(2, '0')}';
