@@ -51,7 +51,6 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
   bool gameOver = false;
   bool completionSaved = false;
   SortingItem? hint;
-  List<SortingItem>? _runtimeItems;
 
   @override
   void initState() {
@@ -576,15 +575,25 @@ class _SortingTray extends StatelessWidget {
                     color: Color(0x55FFE2B5),
                   ),
                 ),
-              for (var i = 0; i < items.length; i++)
+              if (items.isNotEmpty)
                 Positioned(
-                  left: 10 + i * 8.0,
-                  right: 10 + (items.length - i - 1) * 8.0,
-                  bottom: 14,
-                  top: 24,
-                  child: _TrayItem(
-                    item: items[i],
-                    float: float,
+                  left: 6,
+                  right: 6,
+                  top: 25,
+                  bottom: 12,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      for (var i = 0; i < items.length; i++)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 2),
+                          child: _TrayItem(
+                            item: items[i],
+                            float: float,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
             ],
@@ -616,8 +625,8 @@ class _TrayItem extends StatelessWidget {
           feedback: Material(
             color: Colors.transparent,
             child: SizedBox(
-              width: 78,
-              height: 78,
+              width: 52,
+              height: 52,
               child: _visual(),
             ),
           ),
@@ -631,9 +640,11 @@ class _TrayItem extends StatelessWidget {
     );
   }
 
-  Widget _visual() => Container(
-        margin: const EdgeInsets.symmetric(horizontal: 2),
-        padding: const EdgeInsets.all(5),
+  Widget _visual() => SizedBox(
+        width: 52,
+        height: 52,
+        child: Container(
+        padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(13),
@@ -649,8 +660,12 @@ class _TrayItem extends StatelessWidget {
             ),
           ],
         ),
-        child: SvgPicture.asset(item.asset),
-      );
+        child: SvgPicture.asset(
+          item.asset,
+          fit: BoxFit.contain,
+        ),
+      ),
+    );
 }
 
 class _Actions extends StatelessWidget {
