@@ -38,9 +38,9 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
   );
 
   late final level = LevelGenerator.generate(widget.levelNumber);
-  final removed = <SortingItem>{};
-  final history = <SortingItem>[];
   Timer? timer;
+  late List<List<SortingItem>> trays;
+  final history = <_TrayMove>[];
 
   int secondsLeft = 0;
   int moves = 0;
@@ -57,6 +57,7 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
   void initState() {
     super.initState();
     secondsLeft = level.timerSeconds;
+    _createInitialTrays();
     _loadCoins();
   }
 
@@ -74,7 +75,17 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
     if (mounted) setState(() => coins = GameCurrency.instance.coins);
   }
 
-  List<List<SortingItem>> get _runtimeShelves {
+  int get trayCount => level.shelfCount + 3;
+
+  void _createInitialTrays() {
+    final source = List<SortingItem>.from(level.items);
+    trays = List.generate(trayCount, (_) => <SortingItem>[]);
+    for (var i = 0; i < source.length; i++) {
+      trays[i ~/ 3].add(source[i]);
+    }
+  }
+
+  void _startTimer() {
     final source = _runtimeItems ?? level.items;
     return List.generate(
       level.shelfCount,
@@ -88,13 +99,6 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
   SortingItem? _top(List<SortingItem> items) => items.isEmpty
       ? null
       : items.reduce((a, b) => a.stackIndex > b.stackIndex ? a : b);
-
-  bool _accessible(SortingItem item) {
-    for (final shelf in _runtimeShelves) {
-      if (shelf.any((x) => x == item)) return _top(shelf) == item;
-    }
-    return false;
-  }
 
   void _startTimer() {
     if (level.timerSeconds == 0 || timerStarted || paused || gameOver) return;
@@ -111,52 +115,66 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
     });
   }
 
-  void _tapItem(SortingItem item) {
-    if (paused || gameOver || !_accessible(item)) return;
+  void _moveItem(SortingItem item, int fromTray, int toTray) {
+    if (paused || gameOver || fromTray == toTray) return;
+    if (trays[toTray].length >= 3) {
+      _toast('This tray is full');
+      return;
+    }
+
+    final sourceIndex = trays[fromTray].indexOf(item);
+    if (sourceIndex < 0) return;
+
     _startTimer();
     setState(() {
-      removed.add(item);
-      hint = null;
-      history.add(item);
+      trays[fromTray].removeAt(sourceIndex);
+      trays[toTray].add(item);
+      history.add(_TrayMove(
+        item: item,
+        fromTray: fromTray,
+        toTray: toTray,
+      ));
       moves++;
-      score += 10;
+      score += 5;
     });
-    _checkMatch(item.productId);
-    _checkWin();
+    _checkMatch(toTray);
   }
 
-  void _checkMatch(int productId) {
-    final matched = removed
-        .where((item) => item.productId == productId)
-        .toList();
-    if (matched.length < 3) return;
+  void _checkMatch(int trayIndex) {
+    final tray = trays[trayIndex];
+    if (tray.length != 3) return;
+    final productId = tray.first.productId;
+    if (!tray.every((item) => item.productId == productId)) return;
 
-    final triple = matched.sublist(matched.length - 3);
+    final matched = List<SortingItem>.from(tray);
     _match.forward(from: 0).then((_) {
       if (!mounted || gameOver) return;
       setState(() {
-        score += 20;
-        history.removeWhere(triple.contains);
+        trays[trayIndex].clear();
+        history.removeWhere((move) => matched.contains(move.item));
+        score += 30;
       });
       _checkWin();
     });
   }
 
   void _checkWin() {
-    if (removed.length == level.totalItems && !gameOver) {
+    if (trays.every((tray) => tray.isEmpty) && !gameOver) {
       _finish(true);
     }
   }
 
   void _undo() {
     if (history.isEmpty || paused || gameOver) return;
-    final item = history.removeLast();
-    if (!removed.remove(item)) return;
+    final move = history.removeLast();
+    final index = trays[move.toTray].indexOf(move.item);
+    if (index < 0 || trays[move.fromTray].length >= 3) return;
 
     setState(() {
+      trays[move.toTray].removeAt(index);
+      trays[move.fromTray].add(move.item);
       moves = math.max(0, moves - 1);
-      score = math.max(0, score - 1);
-      hint = null;
+      score = math.max(0, score - 5);
     });
   }
 
@@ -165,25 +183,23 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
       if (coins < 5) _toast('Need 5 coins');
       return;
     }
-    final active = level.items.where((x) => !removed.contains(x)).toList()
-      ..shuffle(math.Random(widget.levelNumber * 37 + moves));
+
     final spent = await GameCurrency.instance.spend(5);
     if (!spent || !mounted) return;
-    final buckets = List.generate(level.shelfCount, (_) => <SortingItem>[]);
-    for (var i = 0; i < active.length; i++) {
-      buckets[i % buckets.length].add(active[i]);
+
+    final items = trays.expand((tray) => tray).toList()
+      ..shuffle(math.Random(widget.levelNumber * 37 + moves));
+
+    final shuffled = List.generate(trayCount, (_) => <SortingItem>[]);
+    for (final item in items) {
+      final target = shuffled.indexWhere((tray) => tray.length < 3);
+      if (target < 0) break;
+      shuffled[target].add(item);
     }
-    final items = <SortingItem>[];
-    for (var shelf = 0; shelf < buckets.length; shelf++) {
-      for (var i = 0; i < buckets[shelf].length; i++) {
-        final item = buckets[shelf][i];
-        items.add(SortingItem(itemId: item.itemId, productId: item.productId, asset: item.asset, stackIndex: i, shelfIndex: shelf));
-      }
-    }
+
     setState(() {
+      trays = shuffled;
       coins = GameCurrency.instance.coins;
-      hint = null;
-      _runtimeItems = List.unmodifiable(items);
     });
   }
 
@@ -192,33 +208,46 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
       if (coins < 3) _toast('Need 3 coins');
       return;
     }
-    final tops = <SortingItem>[];
-    for (final shelf in _runtimeShelves) {
-      final top = _top(shelf);
-      if (top != null) tops.add(top);
-    }
-    if (tops.isEmpty) return;
-    final target = tops.firstWhere(
-      (x) => tops.any((y) => y.productId == x.productId && y != x),
-      orElse: () => tops.first,
-    );
+
     final spent = await GameCurrency.instance.spend(3);
     if (!spent || !mounted) return;
-    setState(() {
-      coins = GameCurrency.instance.coins;
-      hint = target;
-    });
-    Future<void>.delayed(const Duration(seconds: 2), () {
-      if (mounted && hint == target) setState(() => hint = null);
-    });
+
+    int? source;
+    int? target;
+
+    for (var i = 0; i < trays.length && source == null; i++) {
+      if (trays[i].isEmpty) continue;
+      for (var j = i + 1; j < trays.length; j++) {
+        if (trays[j].length >= 3 || trays[j].isEmpty) continue;
+        if (trays[i].last.productId == trays[j].last.productId) {
+          source = i;
+          target = j;
+          break;
+        }
+      }
+    }
+
+    if (source == null) {
+      final empty = trays.indexWhere((tray) => tray.isEmpty);
+      if (empty >= 0) {
+        source = trays.indexWhere((tray) => tray.isNotEmpty);
+        target = empty;
+      }
+    }
+
+    setState(() => coins = GameCurrency.instance.coins);
+    if (source != null && target != null) {
+      _toast('Try moving an item from tray ${source! + 1}');
+    } else {
+      _toast('No move available');
+    }
   }
 
   void _reset() {
     timer?.cancel();
     setState(() {
-      removed.clear();
+      _createInitialTrays();
       history.clear();
-      _runtimeItems = null;
       secondsLeft = level.timerSeconds;
       timerStarted = false;
       paused = false;
@@ -327,7 +356,13 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
                 onBack: () => Navigator.pop(context),
                 onPause: () => _showPause(),
               ),
-              _Progress(remaining: removed.length, total: level.totalItems),
+              _Progress(
+                remaining: trays.fold<int>(
+                  0,
+                  (sum, tray) => sum + tray.length,
+                ),
+                total: level.totalItems,
+              ),
               Expanded(
                 child: AnimatedBuilder(
                   animation: _intro,
@@ -335,17 +370,27 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
                     offset: Offset(0, 20 * (1 - _intro.value)),
                     child: Opacity(opacity: _intro.value, child: child),
                   ),
-                  child: ListView.builder(
+                  child: GridView.builder(
                     physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
-                    itemCount: board.length,
-                    itemBuilder: (_, i) => _Shelf(
-                      number: i + 1,
-                      items: board[i],
-                      top: _top(board[i]),
-                      hint: hint,
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
+                      childAspectRatio: 1.35,
+                    ),
+                    itemCount: trays.length,
+                    itemBuilder: (_, index) => _SortingTray(
+                      number: index + 1,
+                      items: trays[index],
                       float: _float,
-                      onTap: _tapItem,
+                      onDrop: (item) {
+                        final source = _findTray(item);
+                        if (source != null) {
+                          _moveItem(item, source, index);
+                        }
+                      },
                     ),
                   ),
                 ),
@@ -436,130 +481,185 @@ class _Progress extends StatelessWidget {
   Widget build(BuildContext context) => Padding(padding: const EdgeInsets.fromLTRB(18, 2, 18, 4), child: ClipRRect(borderRadius: BorderRadius.circular(8), child: LinearProgressIndicator(minHeight: 6, value: total == 0 ? 0 : remaining / total, backgroundColor: const Color(0x66FFFFFF), valueColor: const AlwaysStoppedAnimation(Color(0xFFF18D29)))));
 }
 
-class _Shelf extends StatelessWidget {
-  const _Shelf({
+class _TrayMove {
+  const _TrayMove({
+    required this.item,
+    required this.fromTray,
+    required this.toTray,
+  });
+
+  final SortingItem item;
+  final int fromTray;
+  final int toTray;
+}
+
+class _SortingTray extends StatelessWidget {
+  const _SortingTray({
     required this.number,
     required this.items,
-    required this.top,
-    required this.hint,
     required this.float,
-    required this.onTap,
+    required this.onDrop,
   });
 
   final int number;
   final List<SortingItem> items;
-  final SortingItem? top;
-  final SortingItem? hint;
   final Animation<double> float;
-  final ValueChanged<SortingItem> onTap;
+  final ValueChanged<SortingItem> onDrop;
 
   @override
   Widget build(BuildContext context) {
-    final height = math.max(86.0, 65 + math.min(items.length, 9) * 18.0);
+    return DragTarget<SortingItem>(
+      onWillAcceptWithDetails: (details) => items.length < 3,
+      onAcceptWithDetails: (details) => onDrop(details.data),
+      builder: (context, candidate, rejected) {
+        final highlighted = candidate.isNotEmpty && items.length < 3;
 
-    return Container(
-      height: height,
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF9A592C), Color(0xFF633317)],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFDFA164), width: 2),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x44000000),
-            blurRadius: 7,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            left: 8,
-            right: 8,
-            bottom: 7,
-            child: Container(
-              height: 12,
-              decoration: BoxDecoration(
-                color: const Color(0xFF43210F),
-                borderRadius: BorderRadius.circular(8),
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: highlighted
+                  ? const [Color(0xFFB96D32), Color(0xFF70401F)]
+                  : const [Color(0xFF9A592C), Color(0xFF633317)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: highlighted
+                  ? const Color(0xFFFFD34D)
+                  : const Color(0xFFDFA164),
+              width: highlighted ? 3 : 2,
+            ),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x44000000),
+                blurRadius: 7,
+                offset: Offset(0, 4),
               ),
-            ),
+            ],
           ),
-          Positioned(
-            left: 9,
-            top: 7,
-            child: Text(
-              '$number',
-              style: const TextStyle(
-                color: Color(0x99FFE2B5),
-                fontWeight: FontWeight.w900,
-                fontSize: 11,
+          child: Stack(
+            children: [
+              Positioned(
+                left: 8,
+                right: 8,
+                bottom: 7,
+                child: Container(
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF43210F),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
               ),
-            ),
+              Positioned(
+                left: 9,
+                top: 7,
+                child: Text(
+                  'TRAY $number',
+                  style: const TextStyle(
+                    color: Color(0xAAFFE2B5),
+                    fontWeight: FontWeight.w900,
+                    fontSize: 10,
+                  ),
+                ),
+              ),
+              Positioned(
+                right: 9,
+                top: 7,
+                child: Text(
+                  '${items.length}/3',
+                  style: const TextStyle(
+                    color: Color(0xAAFFE2B5),
+                    fontWeight: FontWeight.w900,
+                    fontSize: 10,
+                  ),
+                ),
+              ),
+              if (items.isEmpty)
+                const Center(
+                  child: Icon(
+                    Icons.add_rounded,
+                    size: 30,
+                    color: Color(0x55FFE2B5),
+                  ),
+                ),
+              for (var i = 0; i < items.length; i++)
+                Positioned(
+                  left: 10 + i * 8.0,
+                  right: 10 + (items.length - i - 1) * 8.0,
+                  bottom: 14,
+                  top: 24,
+                  child: _TrayItem(
+                    item: items[i],
+                    float: float,
+                  ),
+                ),
+            ],
           ),
-          for (var i = 0; i < items.length; i++)
-            _ShelfItem(
-              item: items[i],
-              top: top,
-              hint: hint,
-              bottom: 14 + i * 18.0,
-              float: float,
-              onTap: onTap,
-            ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
 
-class _ShelfItem extends StatelessWidget {
-  const _ShelfItem({required this.item, required this.top, required this.hint, required this.bottom, required this.float, required this.onTap});
-  final SortingItem item;
-  final SortingItem? top;
-  final SortingItem? hint;
-  final double bottom;
-  final Animation<double> float;
-  final ValueChanged<SortingItem> onTap;
+class _TrayItem extends StatelessWidget {
+  const _TrayItem({
+    required this.item,
+    required this.float,
+  });
 
-  Widget _visual(bool accessible) => Container(
-    height: 58,
-    padding: const EdgeInsets.all(4),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: item == hint ? const Color(0xFFFFD22E) : const Color(0xFFE2C39F), width: item == hint ? 3 : 2),
-      boxShadow: [BoxShadow(color: item == hint ? const Color(0x88FFD22E) : const Color(0x55000000), blurRadius: item == hint ? 12 : 5, offset: const Offset(0, 3))],
-    ),
-    child: Opacity(opacity: accessible ? 1 : .72, child: SvgPicture.asset(item.asset)),
-  );
+  final SortingItem item;
+  final Animation<double> float;
 
   @override
-  Widget build(BuildContext context) => AnimatedBuilder(
-    animation: float,
-    builder: (_, __) {
-      final accessible = item == top;
-      final y = accessible ? math.sin(float.value * math.pi) * 2 : 0;
-      return Positioned(
-        left: 22,
-        right: 22,
-        bottom: bottom + y,
-        child: accessible
-            ? Draggable<SortingItem>(
-                data: item,
-                maxSimultaneousDrags: 1,
-                feedback: Material(color: Colors.transparent, child: SizedBox(width: 150, child: _visual(true))),
-                childWhenDragging: Opacity(opacity: .25, child: _visual(true)),
-                child: GestureDetector(onTap: () => onTap(item), child: _visual(true)),
-              )
-            : _visual(false),
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: float,
+      builder: (_, __) => Transform.translate(
+        offset: Offset(0, math.sin(float.value * math.pi) * 1.5),
+        child: Draggable<SortingItem>(
+          data: item,
+          maxSimultaneousDrags: 1,
+          feedback: Material(
+            color: Colors.transparent,
+            child: SizedBox(
+              width: 78,
+              height: 78,
+              child: _visual(),
+            ),
+          ),
+          childWhenDragging: Opacity(
+            opacity: .25,
+            child: _visual(),
+          ),
+          child: _visual(),
+        ),
+      ),
+    );
+  }
+
+  Widget _visual() => Container(
+        margin: const EdgeInsets.symmetric(horizontal: 2),
+        padding: const EdgeInsets.all(5),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(13),
+          border: Border.all(
+            color: const Color(0xFFE2C39F),
+            width: 2,
+          ),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x55000000),
+              blurRadius: 5,
+              offset: Offset(0, 3),
+            ),
+          ],
+        ),
+        child: SvgPicture.asset(item.asset),
       );
-    },
-  );
 }
 
 class _Actions extends StatelessWidget {
