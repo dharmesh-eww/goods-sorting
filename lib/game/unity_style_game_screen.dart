@@ -207,10 +207,17 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
     int? target;
 
     for (var i = 0; i < trays.length && source == null; i++) {
-      if (trays[i].isEmpty) continue;
+      final sourceItems = trays[i].whereType<SortingItem>().toList();
+      if (sourceItems.isEmpty) continue;
+
+      final sourceProductId = sourceItems.last.productId;
+
       for (var j = i + 1; j < trays.length; j++) {
-        if (trays[j].length >= 3 || trays[j].isEmpty) continue;
-        if (trays[i].last.productId == trays[j].last.productId) {
+        final targetItems = trays[j].whereType<SortingItem>().toList();
+        if (targetItems.length >= 3 || targetItems.isEmpty) continue;
+
+        final targetProductId = targetItems.last.productId;
+        if (sourceProductId == targetProductId) {
           source = i;
           target = j;
           break;
@@ -219,9 +226,13 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
     }
 
     if (source == null) {
-      final empty = trays.indexWhere((tray) => tray.isEmpty);
+      final empty = trays.indexWhere(
+        (tray) => tray.every((item) => item == null),
+      );
       if (empty >= 0) {
-        source = trays.indexWhere((tray) => tray.isNotEmpty);
+        source = trays.indexWhere(
+          (tray) => tray.any((item) => item != null),
+        );
         target = empty;
       }
     }
@@ -484,7 +495,9 @@ class _TrayMove {
   const _TrayMove({
     required this.item,
     required this.fromTray,
+    required this.fromPosition,
     required this.toTray,
+    required this.toPosition,
   });
 
   final SortingItem item;
