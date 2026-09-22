@@ -589,77 +589,77 @@ class _TopPanel extends StatelessWidget {
               child: Row(
                 children: [
                   Container(
-                    width: 38,
-                    height: 38,
+                    width: 32,
+                    height: 32,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
                         colors: [Color(0xFFFFC95B), Color(0xFFB96320)],
                       ),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: const Color(0xFFFFE0A5),
                         width: 1,
                       ),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x66000000),
-                          blurRadius: 4,
-                          offset: Offset(0, 3),
-                        ),
-                      ],
                     ),
                     child: const Icon(
                       Icons.layers_rounded,
+                      size: 18,
                       color: Color(0xFF4D250F),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'LEVEL $level',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      letterSpacing: .5,
-                      shadows: [
-                        Shadow(
-                          color: Color(0x99000000),
-                          blurRadius: 3,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'LEVEL $level',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        letterSpacing: .3,
+                        shadows: [
+                          Shadow(
+                            color: Color(0x99000000),
+                            blurRadius: 3,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  const Spacer(),
-                  if (totalSeconds > 0)
+                  if (totalSeconds > 0) ...[
+                    const SizedBox(width: 6),
                     Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             const Icon(
                               Icons.timer_rounded,
-                              size: 17,
+                              size: 15,
                               color: Color(0xFFFFC45D),
                             ),
-                            const SizedBox(width: 3),
+                            const SizedBox(width: 2),
                             Text(
                               _time(seconds),
                               style: const TextStyle(
+                                fontSize: 11,
                                 fontWeight: FontWeight.w900,
                                 color: Colors.white,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 5),
+                        const SizedBox(height: 4),
                         SizedBox(
-                          width: 72,
+                          width: 52,
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(5),
                             child: LinearProgressIndicator(
-                              minHeight: 5,
+                              minHeight: 4,
                               value: (seconds / totalSeconds).clamp(0, 1),
                               backgroundColor: const Color(0x663E1F0E),
                               valueColor: const AlwaysStoppedAnimation(
@@ -670,9 +670,11 @@ class _TopPanel extends StatelessWidget {
                         ),
                       ],
                     ),
-                  const SizedBox(width: 8),
+                  ],
+                  const SizedBox(width: 6),
                   _CoinPill(coins),
                 ],
+              ),
               ),
             ),
           ),
