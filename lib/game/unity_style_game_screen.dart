@@ -343,11 +343,18 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFFFFF2CF), Color(0xFFF6D18B), Color(0xFFD98B48)],
+            colors: [
+              Color(0xFF24140D),
+              Color(0xFF5A3019),
+              Color(0xFFC77A35),
+            ],
           ),
         ),
-        child: SafeArea(
-          child: Column(
+        child: Stack(
+          children: [
+            const Positioned.fill(child: IgnorePointer(child: _ShelfBackdrop())),
+            SafeArea(
+              child: Column(
             children: [
               _TopPanel(
                 level: widget.levelNumber,
@@ -360,7 +367,8 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
               _Progress(
                 remaining: trays.fold<int>(
                   0,
-                  (sum, tray) => sum + tray.length,
+                  (sum, tray) =>
+                      sum + tray.whereType<SortingItem>().length,
                 ),
                 total: level.totalItems,
               ),
@@ -379,7 +387,7 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
                       crossAxisCount: 2,
                       crossAxisSpacing: 10,
                       mainAxisSpacing: 10,
-                      childAspectRatio: 1.35,
+                      childAspectRatio: 1.20,
                     ),
                     itemCount: trays.length,
                     itemBuilder: (_, index) => _SortingTray(
@@ -422,6 +430,8 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
               ),
             ],
           ),
+        ),
+          ],
         ),
       ),
     );
@@ -472,41 +482,250 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
   }
 }
 
+class _ShelfBackdrop extends StatelessWidget {
+  const _ShelfBackdrop();
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _ShelfBackdropPainter(),
+    );
+  }
+}
+
+class _ShelfBackdropPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final wall = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xFF1E110B), Color(0xFF4A2514), Color(0xFF8A4B24)],
+      ).createShader(Offset.zero & size);
+    canvas.drawRect(Offset.zero & size, wall);
+
+    final wood = Paint()
+      ..color = const Color(0xFFB96C32)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    for (var y = 150.0; y < size.height; y += 175) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), wood);
+      canvas.drawLine(
+        Offset(0, y + 5),
+        Offset(size.width, y + 5),
+        Paint()
+          ..color = const Color(0x33000000)
+          ..strokeWidth = 8,
+      );
+    }
+
+    final glow = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          const Color(0x66FFD78A),
+          const Color(0x00FFD78A),
+        ],
+      ).createShader(
+        Rect.fromCircle(
+          center: Offset(size.width * .5, size.height * .24),
+          radius: size.width * .7,
+        ),
+      );
+    canvas.drawCircle(
+      Offset(size.width * .5, size.height * .24),
+      size.width * .7,
+      glow,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _ShelfBackdropPainter oldDelegate) => false;
+}
+
 class _TopPanel extends StatelessWidget {
-  const _TopPanel({required this.level, required this.seconds, required this.totalSeconds, required this.coins, required this.onBack, required this.onPause});
+  const _TopPanel({
+    required this.level,
+    required this.seconds,
+    required this.totalSeconds,
+    required this.coins,
+    required this.onBack,
+    required this.onPause,
+  });
+
   final int level, seconds, totalSeconds, coins;
   final VoidCallback onBack, onPause;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(10, 8, 10, 4),
-    child: Row(children: [
-      _CircleButton(Icons.arrow_back_rounded, onBack),
-      const SizedBox(width: 8),
-      Expanded(child: Container(height: 58, padding: const EdgeInsets.symmetric(horizontal: 12), decoration: _box(), child: Row(children: [
-        const Icon(Icons.layers_rounded, color: Color(0xFF70401E)),
-        const SizedBox(width: 6),
-        Text('LEVEL $level', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: Color(0xFF653918))),
-        const Spacer(),
-        if (totalSeconds > 0) Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Row(children: [const Icon(Icons.timer_rounded, size: 16, color: Color(0xFF9B4D1D)), const SizedBox(width: 3), Text(_time(seconds), style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF653918)))]),
-          const SizedBox(height: 4),
-          SizedBox(width: 82, child: LinearProgressIndicator(minHeight: 4, value: (seconds / totalSeconds).clamp(0, 1), backgroundColor: const Color(0xFFE2C18F), valueColor: const AlwaysStoppedAnimation(Color(0xFFF18D29)))),
-        ]),
-        const SizedBox(width: 8),
-        _CoinPill(coins),
-      ]))),
-      const SizedBox(width: 8),
-      _CircleButton(Icons.pause_rounded, onPause),
-    ]),
-  );
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 5),
+      child: Row(
+        children: [
+          _CircleButton(Icons.arrow_back_rounded, onBack),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Container(
+              height: 64,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xFF5F351D), Color(0xFF2C170D)],
+                ),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: const Color(0xFFE1A15D),
+                  width: 1.5,
+                ),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x99000000),
+                    blurRadius: 10,
+                    offset: Offset(0, 5),
+                  ),
+                  BoxShadow(
+                    color: Color(0x44FFD68A),
+                    blurRadius: 2,
+                    offset: Offset(0, -1),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFFC95B), Color(0xFFB96320)],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: const Color(0xFFFFE0A5),
+                        width: 1,
+                      ),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x66000000),
+                          blurRadius: 4,
+                          offset: Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.layers_rounded,
+                      color: Color(0xFF4D250F),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'LEVEL $level',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: .5,
+                      shadows: [
+                        Shadow(
+                          color: Color(0x99000000),
+                          blurRadius: 3,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Spacer(),
+                  if (totalSeconds > 0)
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.timer_rounded,
+                              size: 17,
+                              color: Color(0xFFFFC45D),
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              _time(seconds),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 5),
+                        SizedBox(
+                          width: 72,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(5),
+                            child: LinearProgressIndicator(
+                              minHeight: 5,
+                              value: (seconds / totalSeconds).clamp(0, 1),
+                              backgroundColor: const Color(0x663E1F0E),
+                              valueColor: const AlwaysStoppedAnimation(
+                                Color(0xFFFFA52E),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  const SizedBox(width: 8),
+                  _CoinPill(coins),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          _CircleButton(Icons.pause_rounded, onPause),
+        ],
+      ),
+    );
+  }
 }
 
 class _Progress extends StatelessWidget {
   const _Progress({required this.remaining, required this.total});
+
   final int remaining, total;
+
   @override
-  Widget build(BuildContext context) => Padding(padding: const EdgeInsets.fromLTRB(18, 2, 18, 4), child: ClipRRect(borderRadius: BorderRadius.circular(8), child: LinearProgressIndicator(minHeight: 6, value: total == 0 ? 0 : remaining / total, backgroundColor: const Color(0x66FFFFFF), valueColor: const AlwaysStoppedAnimation(Color(0xFFF18D29)))));
+  Widget build(BuildContext context) {
+    final value = total == 0 ? 0.0 : remaining / total;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 2, 18, 6),
+      child: Container(
+        height: 9,
+        decoration: BoxDecoration(
+          color: const Color(0x660F0804),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0x55F4B15E)),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: FractionallySizedBox(
+              widthFactor: value.clamp(0, 1),
+              child: const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFFFFD05A), Color(0xFFF07A21)],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _TrayMove {
@@ -546,19 +765,15 @@ class _SortingTray extends StatelessWidget {
         final box = context.findRenderObject() as RenderBox;
         final localOffset = box.globalToLocal(details.offset);
 
-        // Dropping inside a fixed position uses that position.
-        // Dropping anywhere else uses the first available position:
-        // 1, then 2, then 3.
         int? position;
         for (var index = 0; index < 3; index++) {
           final rect = Rect.fromLTWH(
-            8 + index * 53.0,
-            30,
-            48,
-            48,
+            10 + index * 56.0,
+            36,
+            52,
+            58,
           );
-
-          if (rect.contains(localOffset)) {
+          if (rect.contains(localOffset) && items[index] == null) {
             position = index;
             break;
           }
@@ -567,70 +782,143 @@ class _SortingTray extends StatelessWidget {
         onDrop(details.data, position);
       },
       builder: (context, candidate, rejected) {
+        final filledCount = items.whereType<SortingItem>().length;
         return Stack(
           children: [
             Container(
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF9A592C), Color(0xFF633317)],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFFD18A46),
+                    Color(0xFF7A3F1E),
+                    Color(0xFF32170C),
+                  ],
                 ),
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: Color(0xFFDFA164),
+                  color: const Color(0xFFE7AE70),
                   width: 2,
+                ),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0xBB000000),
+                    blurRadius: 12,
+                    offset: Offset(0, 7),
+                  ),
+                  BoxShadow(
+                    color: Color(0x55FFD28A),
+                    blurRadius: 3,
+                    offset: Offset(0, -1),
+                  ),
+                ],
+              ),
+            ),
+            Positioned(
+              left: 6,
+              right: 6,
+              top: 6,
+              height: 22,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFF0B36C), Color(0xFF9A5428)],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x55000000),
+                      blurRadius: 3,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              left: 14,
+              top: 9,
+              child: Text(
+                'SHELF $number',
+                style: const TextStyle(
+                  color: Color(0xFF4A210E),
+                  fontWeight: FontWeight.w900,
+                  fontSize: 10,
+                  letterSpacing: .7,
+                ),
+              ),
+            ),
+            Positioned(
+              right: 14,
+              top: 9,
+              child: Text(
+                '$filledCount/3',
+                style: const TextStyle(
+                  color: Color(0xFFFFE7C3),
+                  fontWeight: FontWeight.w900,
+                  fontSize: 10,
                 ),
               ),
             ),
             Positioned(
               left: 8,
               right: 8,
-              bottom: 7,
+              bottom: 8,
+              height: 13,
               child: Container(
-                height: 10,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF43210F),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ),
-            Positioned(
-              left: 9,
-              top: 7,
-              child: Text(
-                'TRAY $number',
-                style: const TextStyle(
-                  color: Color(0xAAFFE2B5),
-                  fontWeight: FontWeight.w900,
-                  fontSize: 10,
-                ),
-              ),
-            ),
-            Positioned(
-              right: 9,
-              top: 7,
-              child: Text(
-                '${items.whereType<SortingItem>().length}/3',
-                style: const TextStyle(
-                  color: Color(0xAAFFE2B5),
-                  fontWeight: FontWeight.w900,
-                  fontSize: 10,
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF2A1208), Color(0xFF633016)],
+                  ),
+                  borderRadius: BorderRadius.circular(7),
+                  border: Border.all(
+                    color: const Color(0xFFB76B36),
+                  ),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0xAA000000),
+                      blurRadius: 5,
+                      offset: Offset(0, 3),
+                    ),
+                  ],
                 ),
               ),
             ),
             for (var position = 0; position < 3; position++)
               Positioned(
-                left: 8 + position * 53.0,
-                top: 30,
-                width: 48,
-                height: 48,
-                child: items[position] == null
-                    ? const SizedBox.expand()
-                    : _TrayItem(
-                        item: items[position]!,
-                        float: float,
+                left: 10 + position * 56.0,
+                top: 36,
+                width: 52,
+                height: 58,
+                child: Stack(
+                  children: [
+                    Positioned(
+                      left: 1,
+                      right: 1,
+                      bottom: 2,
+                      height: 10,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              Color(0xFF2A1309),
+                              Color(0xFF5A2B13),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
                       ),
+                    ),
+                    if (items[position] != null)
+                      Positioned.fill(
+                        child: _TrayItem(
+                          item: items[position]!,
+                          float: float,
+                        ),
+                      ),
+                  ],
+                ),
               ),
           ],
         );
@@ -641,6 +929,7 @@ class _SortingTray extends StatelessWidget {
 
 class _TrayItem extends StatelessWidget {
   const _TrayItem({required this.item, required this.float});
+
   final SortingItem item;
   final Animation<double> float;
 
@@ -655,9 +944,19 @@ class _TrayItem extends StatelessWidget {
           maxSimultaneousDrags: 1,
           feedback: Material(
             color: Colors.transparent,
-            child: SizedBox(width: 44, height: 44, child: _visual()),
+            child: Transform.scale(
+              scale: 1.12,
+              child: SizedBox(
+                width: 52,
+                height: 52,
+                child: _visual(),
+              ),
+            ),
           ),
-          childWhenDragging: Opacity(opacity: .25, child: _visual()),
+          childWhenDragging: Opacity(
+            opacity: .25,
+            child: _visual(),
+          ),
           child: _visual(),
         ),
       ),
@@ -665,25 +964,118 @@ class _TrayItem extends StatelessWidget {
   }
 
   Widget _visual() => SizedBox(
-    width: 44,
-    height: 44,
-    child: SvgPicture.asset(item.asset, fit: BoxFit.contain),
+    width: 52,
+    height: 52,
+    child: SvgPicture.asset(
+      item.asset,
+      fit: BoxFit.contain,
+    ),
   );
 }
 
 class _Actions extends StatelessWidget {
-  const _Actions({required this.moves, required this.onUndo, required this.onShuffle, required this.onHint});
+  const _Actions({
+    required this.moves,
+    required this.onUndo,
+    required this.onShuffle,
+    required this.onHint,
+  });
+
   final int moves;
   final VoidCallback? onUndo, onShuffle, onHint;
+
   @override
-  Widget build(BuildContext context) => Padding(padding: const EdgeInsets.fromLTRB(14, 3, 14, 9), child: Row(children: [_SmallAction(Icons.shuffle_rounded, 'SHUFFLE', onShuffle), const Spacer(), Text('MOVES $moves', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF663718))), const Spacer(), _SmallAction(Icons.undo_rounded, 'UNDO', onUndo), const SizedBox(width: 7), _SmallAction(Icons.lightbulb_rounded, 'HINT', onHint)]));
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 3, 12, 10),
+      child: Row(
+        children: [
+          _SmallAction(Icons.shuffle_rounded, 'SHUFFLE', onShuffle),
+          const Spacer(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF5C3017), Color(0xFF2A1409)],
+              ),
+              borderRadius: BorderRadius.circular(13),
+              border: Border.all(color: const Color(0xFFB96A34)),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x66000000),
+                  blurRadius: 5,
+                  offset: Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Text(
+              'MOVES $moves',
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFFFFE5C1),
+              ),
+            ),
+          ),
+          const Spacer(),
+          _SmallAction(Icons.undo_rounded, 'UNDO', onUndo),
+          const SizedBox(width: 7),
+          _SmallAction(Icons.lightbulb_rounded, 'HINT', onHint),
+        ],
+      ),
+    );
+  }
 }
 
 class _SmallAction extends StatelessWidget {
   const _SmallAction(this.icon, this.label, this.onTap);
-  final IconData icon; final String label; final VoidCallback? onTap;
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+
   @override
-  Widget build(BuildContext context) => Opacity(opacity: onTap == null ? .45 : 1, child: GestureDetector(onTap: onTap, child: Container(padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8), decoration: BoxDecoration(color: const Color(0xFFF8E1B8), borderRadius: BorderRadius.circular(13), border: Border.all(color: const Color(0xFFD0924E))), child: Row(children: [Icon(icon, size: 18, color: const Color(0xFF713A18)), const SizedBox(width: 3), Text(label, style: const TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Color(0xFF713A18)))]))));
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: onTap == null ? .45 : 1,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFFFFD58A), Color(0xFFC8732D)],
+            ),
+            borderRadius: BorderRadius.circular(13),
+            border: Border.all(color: const Color(0xFFFFE1AE)),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x88000000),
+                blurRadius: 5,
+                offset: Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 18, color: const Color(0xFF5B2A0E)),
+              const SizedBox(width: 3),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 8,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF5B2A0E),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _CircleButton extends StatelessWidget {
@@ -700,27 +1092,77 @@ class _CircleButton extends StatelessWidget {
         width: 48,
         height: 48,
         decoration: BoxDecoration(
-          color: const Color(0xFFF9E4BD),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFFFD68A), Color(0xFFB96425)],
+          ),
           shape: BoxShape.circle,
-          border: Border.all(color: const Color(0xFFD0924E)),
+          border: Border.all(
+            color: const Color(0xFFFFE4B7),
+            width: 1.5,
+          ),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x44000000),
-              blurRadius: 5,
-              offset: Offset(0, 3),
+              color: Color(0x99000000),
+              blurRadius: 8,
+              offset: Offset(0, 5),
             ),
           ],
         ),
-        child: Icon(icon, color: const Color(0xFF713A18)),
+        child: Icon(icon, color: const Color(0xFF5A2B0E)),
       ),
     );
   }
 }
 
 class _CoinPill extends StatelessWidget {
-  const _CoinPill(this.coins); final int coins;
+  const _CoinPill(this.coins);
+
+  final int coins;
+
   @override
-  Widget build(BuildContext context) => Container(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 6), decoration: BoxDecoration(color: const Color(0xFFFFC44D), borderRadius: BorderRadius.circular(15), border: Border.all(color: const Color(0xFFD57B20))), child: Row(children: [const Icon(Icons.monetization_on_rounded, size: 17, color: Color(0xFF8D4A0D)), const SizedBox(width: 2), Text('$coins', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF70350D)))]));
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFFFE08A), Color(0xFFE99521)],
+        ),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(
+          color: const Color(0xFFFFF0B5),
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x88000000),
+            blurRadius: 4,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.monetization_on_rounded,
+            size: 18,
+            color: Color(0xFF8D4A0D),
+          ),
+          const SizedBox(width: 2),
+          Text(
+            '$coins',
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF70350D),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _ResultPanel extends StatelessWidget {
@@ -886,5 +1328,18 @@ class _WideButton extends StatelessWidget {
   Widget build(BuildContext context) => SizedBox(width: double.infinity, height: 54, child: ElevatedButton.icon(onPressed: onTap, icon: Icon(icon), label: Text(label, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, letterSpacing: .8)), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF19A24), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)))));
 }
 
-BoxDecoration _box() => BoxDecoration(color: const Color(0xFFF9E6C1), borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFD0924E)), boxShadow: const [BoxShadow(color: Color(0x44000000), blurRadius: 5, offset: Offset(0, 3))]);
+BoxDecoration _box() => BoxDecoration(
+  gradient: const LinearGradient(
+    colors: [Color(0xFF5F351D), Color(0xFF2C170D)],
+  ),
+  borderRadius: BorderRadius.circular(18),
+  border: Border.all(color: const Color(0xFFD0924E)),
+  boxShadow: const [
+    BoxShadow(
+      color: Color(0x66000000),
+      blurRadius: 8,
+      offset: Offset(0, 4),
+    ),
+  ],
+);
 String _time(int seconds) => '${seconds ~/ 60}:${(seconds % 60).toString().padLeft(2, '0')}';
