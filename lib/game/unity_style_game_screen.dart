@@ -567,34 +567,18 @@ class _SortingTray extends StatelessWidget {
                   ),
                 ),
               ),
-              if (items.isEmpty)
-                const Center(
-                  child: Icon(
-                    Icons.add_rounded,
-                    size: 30,
-                    color: Color(0x55FFE2B5),
-                  ),
-                ),
-              if (items.isNotEmpty)
+              for (var position = 0; position < 3; position++)
                 Positioned(
-                  left: 6,
-                  right: 6,
-                  top: 25,
-                  bottom: 12,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      for (var i = 0; i < items.length; i++)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 2),
-                          child: _TrayItem(
-                            item: items[i],
-                            float: float,
-                          ),
-                        ),
-                    ],
-                  ),
+                  left: 8 + position * 53.0,
+                  top: 30,
+                  width: 48,
+                  height: 48,
+                  child: position < items.length
+                      ? _TrayItem(
+                          item: items[position],
+                          float: float,
+                        )
+                      : const SizedBox.shrink(),
                 ),
             ],
           ),
@@ -625,8 +609,8 @@ class _TrayItem extends StatelessWidget {
           feedback: Material(
             color: Colors.transparent,
             child: SizedBox(
-              width: 52,
-              height: 52,
+              width: 44,
+              height: 44,
               child: _visual(),
             ),
           ),
@@ -641,31 +625,13 @@ class _TrayItem extends StatelessWidget {
   }
 
   Widget _visual() => SizedBox(
-        width: 52,
-        height: 52,
-        child: Container(
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(13),
-          border: Border.all(
-            color: const Color(0xFFE2C39F),
-            width: 2,
-          ),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x55000000),
-              blurRadius: 5,
-              offset: Offset(0, 3),
-            ),
-          ],
-        ),
+        width: 44,
+        height: 44,
         child: SvgPicture.asset(
           item.asset,
           fit: BoxFit.contain,
         ),
-      ),
-    );
+      );
 }
 
 class _Actions extends StatelessWidget {
