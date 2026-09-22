@@ -39,7 +39,7 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
 
   late final level = LevelGenerator.generate(widget.levelNumber);
   Timer? timer;
-  late List<List<SortingItem>> trays;
+  late List<List<SortingItem?>> trays;
   final history = <_TrayMove>[];
 
   int secondsLeft = 0;
@@ -78,9 +78,9 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
 
   void _createInitialTrays() {
     final source = List<SortingItem>.from(level.items);
-    trays = List.generate(trayCount, (_) => <SortingItem>[]);
+    trays = List.generate(trayCount, (_) => <SortingItem?>[null, null, null]);
     for (var i = 0; i < source.length; i++) {
-      trays[i ~/ 3].add(source[i]);
+      trays[i ~/ 3][i % 3] = source[i];
     }
   }
 
@@ -99,24 +99,25 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
     });
   }
 
-  void _moveItem(SortingItem item, int fromTray, int toTray) {
-    if (paused || gameOver || fromTray == toTray) return;
-    if (trays[toTray].length >= 3) {
-      _toast('This tray is full');
+  void _moveItem(SortingItem item, int fromTray, int fromPosition, int toTray, int toPosition) {
+    if (paused || gameOver) return;
+    if (fromTray == toTray && fromPosition == toPosition) return;
+    if (trays[toTray][toPosition] != null) {
+      _toast('That position is occupied');
       return;
     }
-
-    final sourceIndex = trays[fromTray].indexOf(item);
-    if (sourceIndex < 0) return;
+    if (trays[fromTray][fromPosition] != item) return;
 
     _startTimer();
     setState(() {
-      trays[fromTray].removeAt(sourceIndex);
-      trays[toTray].add(item);
+      trays[fromTray][fromPosition] = null;
+      trays[toTray][toPosition] = item;
       history.add(_TrayMove(
         item: item,
         fromTray: fromTray,
+        fromPosition: fromPosition,
         toTray: toTray,
+        toPosition: toPosition,
       ));
       moves++;
       score += 5;
@@ -126,15 +127,17 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
 
   void _checkMatch(int trayIndex) {
     final tray = trays[trayIndex];
-    if (tray.length != 3) return;
-    final productId = tray.first.productId;
-    if (!tray.every((item) => item.productId == productId)) return;
+    if (tray.any((item) => item == null)) return;
+    final filled = tray.whereType<SortingItem>().toList();
+    if (filled.length != 3) return;
+    final productId = filled.first.productId;
+    if (!filled.every((item) => item.productId == productId)) return;
 
-    final matched = List<SortingItem>.from(tray);
+    final matched = List<SortingItem>.from(filled);
     _match.forward(from: 0).then((_) {
       if (!mounted || gameOver) return;
       setState(() {
-        trays[trayIndex].clear();
+        trays[trayIndex] = <SortingItem?>[null, null, null];
         history.removeWhere((move) => matched.contains(move.item));
         score += 30;
       });
@@ -143,7 +146,7 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
   }
 
   void _checkWin() {
-    if (trays.every((tray) => tray.isEmpty) && !gameOver) {
+    if (trays.every((tray) => tray.every((item) => item == null)) && !gameOver) {
       _finish(true);
     }
   }
@@ -151,12 +154,14 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
   void _undo() {
     if (history.isEmpty || paused || gameOver) return;
     final move = history.removeLast();
-    final index = trays[move.toTray].indexOf(move.item);
-    if (index < 0 || trays[move.fromTray].length >= 3) return;
+    if (trays[move.toTray][move.toPosition] != move.item ||
+        trays[move.fromTray][move.fromPosition] != null) {
+      return;
+    }
 
     setState(() {
-      trays[move.toTray].removeAt(index);
-      trays[move.fromTray].add(move.item);
+      trays[move.toTray][move.toPosition] = null;
+      trays[move.fromTray][move.fromPosition] = move.item;
       moves = math.max(0, moves - 1);
       score = math.max(0, score - 5);
     });
@@ -174,11 +179,13 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
     final items = trays.expand((tray) => tray).toList()
       ..shuffle(math.Random(widget.levelNumber * 37 + moves));
 
-    final shuffled = List.generate(trayCount, (_) => <SortingItem>[]);
+    final shuffled = List.generate(trayCount, (_) => <SortingItem?>[null, null, null]);
+    var slot = 0;
     for (final item in items) {
-      final target = shuffled.indexWhere((tray) => tray.length < 3);
-      if (target < 0) break;
-      shuffled[target].add(item);
+      while (slot < trayCount * 3 && shuffled[slot ~/ 3][slot % 3] != null) slot++;
+      if (slot >= trayCount * 3) break;
+      shuffled[slot ~/ 3][slot % 3] = item;
+      slot++;
     }
 
     setState(() {
@@ -368,10 +375,10 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
                       number: index + 1,
                       items: trays[index],
                       float: _float,
-                      onDrop: (item) {
-                        final source = _findTray(item);
+                      onDrop: (item, position) {
+                        final source = _findItemPosition(item);
                         if (source != null) {
-                          _moveItem(item, source, index);
+                          _moveItem(item, source.$1, source.$2, index, position);
                         }
                       },
                     ),
@@ -391,9 +398,11 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
     );
   }
 
-  int? _findTray(SortingItem item) {
-    for (var i = 0; i < trays.length; i++) {
-      if (trays[i].contains(item)) return i;
+  (int, int)? _findItemPosition(SortingItem item) {
+    for (var trayIndex = 0; trayIndex < trays.length; trayIndex++) {
+      for (var position = 0; position < 3; position++) {
+        if (trays[trayIndex][position] == item) return (trayIndex, position);
+      }
     }
     return null;
   }
@@ -480,7 +489,9 @@ class _TrayMove {
 
   final SortingItem item;
   final int fromTray;
+  final int fromPosition;
   final int toTray;
+  final int toPosition;
 }
 
 class _SortingTray extends StatelessWidget {
@@ -492,108 +503,70 @@ class _SortingTray extends StatelessWidget {
   });
 
   final int number;
-  final List<SortingItem> items;
+  final List<SortingItem?> items;
   final Animation<double> float;
-  final ValueChanged<SortingItem> onDrop;
+  final void Function(SortingItem item, int position) onDrop;
 
   @override
   Widget build(BuildContext context) {
-    return DragTarget<SortingItem>(
-      onWillAcceptWithDetails: (details) => items.length < 3,
-      onAcceptWithDetails: (details) => onDrop(details.data),
-      builder: (context, candidate, rejected) {
-        final highlighted = candidate.isNotEmpty && items.length < 3;
-
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
+    return Stack(
+      children: [
+        Container(
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: highlighted
-                  ? const [Color(0xFFB96D32), Color(0xFF70401F)]
-                  : const [Color(0xFF9A592C), Color(0xFF633317)],
+            gradient: const LinearGradient(
+              colors: [Color(0xFF9A592C), Color(0xFF633317)],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: highlighted
-                  ? const Color(0xFFFFD34D)
-                  : const Color(0xFFDFA164),
-              width: highlighted ? 3 : 2,
+            border: Border.all(color: Color(0xFFDFA164), width: 2),
+          ),
+        ),
+        Positioned(
+          left: 8, right: 8, bottom: 7,
+          child: Container(
+            height: 10,
+            decoration: BoxDecoration(
+              color: const Color(0xFF43210F),
+              borderRadius: BorderRadius.circular(8),
             ),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x44000000),
-                blurRadius: 7,
-                offset: Offset(0, 4),
-              ),
-            ],
           ),
-          child: Stack(
-            children: [
-              Positioned(
-                left: 8,
-                right: 8,
-                bottom: 7,
-                child: Container(
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF43210F),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-              Positioned(
-                left: 9,
-                top: 7,
-                child: Text(
-                  'TRAY $number',
-                  style: const TextStyle(
-                    color: Color(0xAAFFE2B5),
-                    fontWeight: FontWeight.w900,
-                    fontSize: 10,
-                  ),
-                ),
-              ),
-              Positioned(
-                right: 9,
-                top: 7,
-                child: Text(
-                  '${items.length}/3',
-                  style: const TextStyle(
-                    color: Color(0xAAFFE2B5),
-                    fontWeight: FontWeight.w900,
-                    fontSize: 10,
-                  ),
-                ),
-              ),
-              for (var position = 0; position < 3; position++)
-                Positioned(
-                  left: 8 + position * 53.0,
-                  top: 30,
-                  width: 48,
-                  height: 48,
-                  child: position < items.length
-                      ? _TrayItem(
-                          item: items[position],
-                          float: float,
-                        )
-                      : const SizedBox.shrink(),
-                ),
-            ],
+        ),
+        Positioned(
+          left: 9, top: 7,
+          child: Text('TRAY $number', style: const TextStyle(
+            color: Color(0xAAFFE2B5), fontWeight: FontWeight.w900, fontSize: 10)),
+        ),
+        Positioned(
+          right: 9, top: 7,
+          child: Text('${items.whereType<SortingItem>().length}/3',
+            style: const TextStyle(
+              color: Color(0xAAFFE2B5), fontWeight: FontWeight.w900, fontSize: 10)),
+        ),
+        for (var position = 0; position < 3; position++)
+          Positioned(
+            left: 8 + position * 53.0,
+            top: 30,
+            width: 48,
+            height: 48,
+            child: DragTarget<SortingItem>(
+              onWillAcceptWithDetails: (details) => items[position] == null,
+              onAcceptWithDetails: (details) => onDrop(details.data, position),
+              builder: (context, candidate, rejected) {
+                final item = items[position];
+                return item == null
+                    ? const SizedBox.expand()
+                    : _TrayItem(item: item, float: float);
+              },
+            ),
           ),
-        );
-      },
+      ],
     );
   }
 }
 
 class _TrayItem extends StatelessWidget {
-  const _TrayItem({
-    required this.item,
-    required this.float,
-  });
-
+  const _TrayItem({required this.item, required this.float});
   final SortingItem item;
   final Animation<double> float;
 
@@ -608,16 +581,9 @@ class _TrayItem extends StatelessWidget {
           maxSimultaneousDrags: 1,
           feedback: Material(
             color: Colors.transparent,
-            child: SizedBox(
-              width: 44,
-              height: 44,
-              child: _visual(),
-            ),
+            child: SizedBox(width: 44, height: 44, child: _visual()),
           ),
-          childWhenDragging: Opacity(
-            opacity: .25,
-            child: _visual(),
-          ),
+          childWhenDragging: Opacity(opacity: .25, child: _visual()),
           child: _visual(),
         ),
       ),
@@ -625,13 +591,10 @@ class _TrayItem extends StatelessWidget {
   }
 
   Widget _visual() => SizedBox(
-        width: 44,
-        height: 44,
-        child: SvgPicture.asset(
-          item.asset,
-          fit: BoxFit.contain,
-        ),
-      );
+    width: 44,
+    height: 44,
+    child: SvgPicture.asset(item.asset, fit: BoxFit.contain),
+  );
 }
 
 class _Actions extends StatelessWidget {
