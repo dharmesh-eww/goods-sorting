@@ -28,10 +28,6 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
     vsync: this,
     duration: const Duration(milliseconds: 600),
   )..forward();
-  late final _float = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 1500),
-  )..repeat(reverse: true);
   late final _match = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 350),
@@ -64,7 +60,6 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
   void dispose() {
     timer?.cancel();
     _intro.dispose();
-    _float.dispose();
     _match.dispose();
     super.dispose();
   }
@@ -393,7 +388,6 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
                     itemBuilder: (_, index) => _SortingTray(
                       number: index + 1,
                       items: trays[index],
-                      float: _float,
                       onDrop: (item, position) {
                         final source = _findItemPosition(item);
                         if (source == null) return;
@@ -748,13 +742,11 @@ class _SortingTray extends StatelessWidget {
   const _SortingTray({
     required this.number,
     required this.items,
-    required this.float,
     required this.onDrop,
   });
 
   final int number;
   final List<SortingItem?> items;
-  final Animation<double> float;
   final void Function(SortingItem item, int? position) onDrop;
 
   @override
@@ -914,7 +906,6 @@ class _SortingTray extends StatelessWidget {
                       Positioned.fill(
                         child: _TrayItem(
                           item: items[position]!,
-                          float: float,
                         ),
                       ),
                   ],
@@ -928,38 +919,31 @@ class _SortingTray extends StatelessWidget {
 }
 
 class _TrayItem extends StatelessWidget {
-  const _TrayItem({required this.item, required this.float});
+  const _TrayItem({required this.item});
 
   final SortingItem item;
-  final Animation<double> float;
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: float,
-      builder: (_, __) => Transform.translate(
-        offset: Offset(0, math.sin(float.value * math.pi) * 1.5),
-        child: Draggable<SortingItem>(
-          data: item,
-          maxSimultaneousDrags: 1,
-          feedback: Material(
-            color: Colors.transparent,
-            child: Transform.scale(
-              scale: 1.12,
-              child: SizedBox(
-                width: 52,
-                height: 52,
-                child: _visual(),
-              ),
-            ),
-          ),
-          childWhenDragging: Opacity(
-            opacity: .25,
+    return Draggable<SortingItem>(
+      data: item,
+      maxSimultaneousDrags: 1,
+      feedback: Material(
+        color: Colors.transparent,
+        child: Transform.scale(
+          scale: 1.12,
+          child: SizedBox(
+            width: 52,
+            height: 52,
             child: _visual(),
           ),
-          child: _visual(),
         ),
       ),
+      childWhenDragging: Opacity(
+        opacity: .25,
+        child: _visual(),
+      ),
+      child: _visual(),
     );
   }
 
