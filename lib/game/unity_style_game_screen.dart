@@ -884,26 +884,42 @@ class _SortingTray extends StatelessWidget {
                 width: 52,
                 height: 58,
                 child: Stack(
+                  clipBehavior: Clip.none,
                   children: [
+                    // Fixed position indicator. The item sits directly on
+                    // this shelf line instead of having a second "bottle
+                    // floor" rendered below it.
                     Positioned(
-                      left: 1,
-                      right: 1,
-                      bottom: 2,
-                      height: 10,
+                      left: 3,
+                      right: 3,
+                      bottom: 4,
+                      height: 3,
                       child: DecoratedBox(
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                             colors: [
-                              Color(0xFF2A1309),
-                              Color(0xFF5A2B13),
+                              Color(0xFFB66A32),
+                              Color(0xFFE6A15C),
+                              Color(0xFF8A481F),
                             ],
                           ),
-                          borderRadius: BorderRadius.circular(5),
+                          borderRadius: BorderRadius.circular(3),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x88000000),
+                              blurRadius: 2,
+                              offset: Offset(0, 1),
+                            ),
+                          ],
                         ),
                       ),
                     ),
                     if (items[position] != null)
-                      Positioned.fill(
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 5,
+                        height: 52,
                         child: _TrayItem(
                           item: items[position]!,
                         ),
