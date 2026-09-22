@@ -388,9 +388,27 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen>
                       float: _float,
                       onDrop: (item, position) {
                         final source = _findItemPosition(item);
-                        if (source != null) {
-                          _moveItem(item, source.$1, source.$2, index, position);
+                        if (source == null) return;
+
+                        var targetPosition = position;
+                        if (targetPosition == null) {
+                          targetPosition = trays[index].indexWhere(
+                            (slot) => slot == null,
+                          );
                         }
+
+                        if (targetPosition == null || targetPosition < 0) {
+                          _toast('Tray is full');
+                          return;
+                        }
+
+                        _moveItem(
+                          item,
+                          source.$1,
+                          source.$2,
+                          index,
+                          targetPosition,
+                        );
                       },
                     ),
                   ),
@@ -518,62 +536,105 @@ class _SortingTray extends StatelessWidget {
   final int number;
   final List<SortingItem?> items;
   final Animation<double> float;
-  final void Function(SortingItem item, int position) onDrop;
+  final void Function(SortingItem item, int? position) onDrop;
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF9A592C), Color(0xFF633317)],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
+    return DragTarget<SortingItem>(
+      onWillAcceptWithDetails: (details) => items.any((item) => item == null),
+      onAcceptWithDetails: (details) {
+        final box = context.findRenderObject() as RenderBox;
+        final localOffset = box.globalToLocal(details.offset);
+
+        // Dropping inside a fixed position uses that position.
+        // Dropping anywhere else uses the first available position:
+        // 1, then 2, then 3.
+        int? position;
+        for (var index = 0; index < 3; index++) {
+          final rect = Rect.fromLTWH(
+            8 + index * 53.0,
+            30,
+            48,
+            48,
+          );
+
+          if (rect.contains(localOffset)) {
+            position = index;
+            break;
+          }
+        }
+
+        onDrop(details.data, position);
+      },
+      builder: (context, candidate, rejected) {
+        return Stack(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF9A592C), Color(0xFF633317)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: Color(0xFFDFA164),
+                  width: 2,
+                ),
+              ),
             ),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Color(0xFFDFA164), width: 2),
-          ),
-        ),
-        Positioned(
-          left: 8, right: 8, bottom: 7,
-          child: Container(
-            height: 10,
-            decoration: BoxDecoration(
-              color: const Color(0xFF43210F),
-              borderRadius: BorderRadius.circular(8),
+            Positioned(
+              left: 8,
+              right: 8,
+              bottom: 7,
+              child: Container(
+                height: 10,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF43210F),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
             ),
-          ),
-        ),
-        Positioned(
-          left: 9, top: 7,
-          child: Text('TRAY $number', style: const TextStyle(
-            color: Color(0xAAFFE2B5), fontWeight: FontWeight.w900, fontSize: 10)),
-        ),
-        Positioned(
-          right: 9, top: 7,
-          child: Text('${items.whereType<SortingItem>().length}/3',
-            style: const TextStyle(
-              color: Color(0xAAFFE2B5), fontWeight: FontWeight.w900, fontSize: 10)),
-        ),
-        for (var position = 0; position < 3; position++)
-          Positioned(
-            left: 8 + position * 53.0,
-            top: 30,
-            width: 48,
-            height: 48,
-            child: DragTarget<SortingItem>(
-              onWillAcceptWithDetails: (details) => items[position] == null,
-              onAcceptWithDetails: (details) => onDrop(details.data, position),
-              builder: (context, candidate, rejected) {
-                final item = items[position];
-                return item == null
+            Positioned(
+              left: 9,
+              top: 7,
+              child: Text(
+                'TRAY $number',
+                style: const TextStyle(
+                  color: Color(0xAAFFE2B5),
+                  fontWeight: FontWeight.w900,
+                  fontSize: 10,
+                ),
+              ),
+            ),
+            Positioned(
+              right: 9,
+              top: 7,
+              child: Text(
+                '${items.whereType<SortingItem>().length}/3',
+                style: const TextStyle(
+                  color: Color(0xAAFFE2B5),
+                  fontWeight: FontWeight.w900,
+                  fontSize: 10,
+                ),
+              ),
+            ),
+            for (var position = 0; position < 3; position++)
+              Positioned(
+                left: 8 + position * 53.0,
+                top: 30,
+                width: 48,
+                height: 48,
+                child: items[position] == null
                     ? const SizedBox.expand()
-                    : _TrayItem(item: item, float: float);
-              },
-            ),
-          ),
-      ],
+                    : _TrayItem(
+                        item: items[position]!,
+                        float: float,
+                      ),
+              ),
+          ],
+        );
+      },
     );
   }
 }
