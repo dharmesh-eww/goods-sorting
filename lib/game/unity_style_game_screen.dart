@@ -675,7 +675,6 @@ class _TopPanel extends StatelessWidget {
                   _CoinPill(coins),
                 ],
               ),
-              ),
             ),
           ),
           const SizedBox(width: 8),
