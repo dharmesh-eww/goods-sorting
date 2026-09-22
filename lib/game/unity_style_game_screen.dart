@@ -346,9 +346,9 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen> with Ticker
                         padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
-                          crossAxisSpacing: 10,
-                          mainAxisSpacing: 10,
-                          childAspectRatio: 1.20,
+                          crossAxisSpacing: 8,
+                          mainAxisSpacing: 8,
+                          childAspectRatio: 1.35,
                         ),
                         itemCount: trays.length,
                         itemBuilder: (_, index) => _SortingTray(
@@ -664,7 +664,7 @@ class _SortingTray extends StatelessWidget {
 
         int? position;
         for (var index = 0; index < 3; index++) {
-          final rect = Rect.fromLTWH(10 + index * 56.0, 36, 52, 58);
+          final rect = Rect.fromLTWH(6 + index * 53.0, 24, 50, 54);
           if (rect.contains(localOffset) && items[index] == null) {
             position = index;
             break;
@@ -693,15 +693,15 @@ class _SortingTray extends StatelessWidget {
             ),
             for (var position = 0; position < 3; position++)
               Positioned(
-                left: 10 + position * 56.0,
-                top: 36,
-                width: 52,
-                height: 58,
+                left: 6 + position * 53.0,
+                top: 24,
+                width: 50,
+                height: 54,
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
                     if (items[position] != null)
-                      Positioned(left: 0, right: 0, bottom: 5, height: 52, child: _TrayItem(item: items[position]!)),
+                      Positioned(left: 0, right: 0, bottom: 3, height: 50, child: _TrayItem(item: items[position]!)),
                   ],
                 ),
               ),
@@ -724,14 +724,14 @@ class _TrayItem extends StatelessWidget {
       maxSimultaneousDrags: 1,
       feedback: Material(
         color: Colors.transparent,
-        child: Transform.scale(scale: 1.12, child: SizedBox(width: 52, height: 52, child: _visual())),
+        child: Transform.scale(scale: 1.12, child: SizedBox(width: 50, height: 50, child: _visual())),
       ),
       childWhenDragging: Opacity(opacity: .25, child: _visual()),
       child: _visual(),
     );
   }
 
-  Widget _visual() => SizedBox(width: 52, height: 52, child: SvgPicture.asset(item.asset, fit: BoxFit.contain));
+  Widget _visual() => SizedBox(width: 50, height: 50, child: SvgPicture.asset(item.asset, fit: BoxFit.contain));
 }
 
 class _Actions extends StatelessWidget {
