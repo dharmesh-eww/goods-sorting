@@ -341,36 +341,24 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen> with Ticker
                         offset: Offset(0, 20 * (1 - _intro.value)),
                         child: Opacity(opacity: _intro.value, child: child),
                       ),
-                      child: GridView.builder(
-                        physics: const BouncingScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 8,
-                          mainAxisSpacing: 8,
-                          childAspectRatio: 1.35,
-                        ),
-                        itemCount: trays.length,
-                        itemBuilder: (_, index) => _SortingTray(
-                          number: index + 1,
-                          items: trays[index],
-                          onDrop: (item, position) {
-                            final source = _findItemPosition(item);
-                            if (source == null) return;
+                      child: _CustomTrayLayout(
+                        trays: trays,
+                        onDrop: (trayIndex, item, position) {
+                          final source = _findItemPosition(item);
+                          if (source == null) return;
 
-                            var targetPosition = position;
-                            if (targetPosition == null) {
-                              targetPosition = trays[index].indexWhere((slot) => slot == null);
-                            }
+                          var targetPosition = position;
+                          if (targetPosition == null) {
+                            targetPosition = trays[trayIndex].indexWhere((slot) => slot == null);
+                          }
 
-                            if (targetPosition == null || targetPosition < 0) {
-                              _toast('Tray is full');
-                              return;
-                            }
+                          if (targetPosition == null || targetPosition < 0) {
+                            _toast('Tray is full');
+                            return;
+                          }
 
-                            _moveItem(item, source.$1, source.$2, index, targetPosition);
-                          },
-                        ),
+                          _moveItem(item, source.$1, source.$2, trayIndex, targetPosition);
+                        },
                       ),
                     ),
                   ),
@@ -647,8 +635,73 @@ class _TrayMove {
   final int toPosition;
 }
 
+class _CustomTrayLayout extends StatelessWidget {
+  const _CustomTrayLayout({
+    required this.trays,
+    required this.onDrop,
+  });
+
+  final List<List<SortingItem?>> trays;
+  final void Function(int trayIndex, SortingItem item, int? position) onDrop;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 390 ? 3 : 2;
+        final rows = <List<int>>[];
+
+        for (var start = 0; start < trays.length; start += columns) {
+          final end = math.min(start + columns, trays.length);
+          rows.add(List<int>.generate(end - start, (index) => start + index));
+        }
+
+        return SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+          child: Column(
+            children: [
+              for (var rowIndex = 0; rowIndex < rows.length; rowIndex++) ...[
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    for (var column = 0; column < columns; column++)
+                      Expanded(
+                        child: Padding(
+                          padding: EdgeInsets.only(
+                            right: column == columns - 1 ? 0 : 8,
+                          ),
+                          child: rows[rowIndex].length > column
+                              ? _SortingTray(
+                                  number: rows[rowIndex][column] + 1,
+                                  items: trays[rows[rowIndex][column]],
+                                  onDrop: (item, position) => onDrop(
+                                    rows[rowIndex][column],
+                                    item,
+                                    position,
+                                  ),
+                                )
+                              : const SizedBox.shrink(),
+                        ),
+                      ),
+                  ],
+                ),
+                if (rowIndex != rows.length - 1) const SizedBox(height: 12),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _SortingTray extends StatelessWidget {
-  const _SortingTray({required this.number, required this.items, required this.onDrop});
+  const _SortingTray({
+    required this.number,
+    required this.items,
+    required this.onDrop,
+  });
 
   final int number;
   final List<SortingItem?> items;
@@ -656,56 +709,79 @@ class _SortingTray extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DragTarget<SortingItem>(
-      onWillAcceptWithDetails: (details) => items.any((item) => item == null),
-      onAcceptWithDetails: (details) {
-        final box = context.findRenderObject() as RenderBox;
-        final localOffset = box.globalToLocal(details.offset);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final itemSize = ((constraints.maxWidth - 8) / 3).clamp(34.0, 50.0);
+        final gap = (constraints.maxWidth - itemSize * 3) / 2;
+        const lineHeight = 4.0;
+        final lineTop = itemSize + 2.0;
 
-        int? position;
-        for (var index = 0; index < 3; index++) {
-          final rect = Rect.fromLTWH(6 + index * 53.0, 24, 50, 54);
-          if (rect.contains(localOffset) && items[index] == null) {
-            position = index;
-            break;
-          }
-        }
+        return SizedBox(
+          height: lineTop + lineHeight,
+          child: DragTarget<SortingItem>(
+            onWillAcceptWithDetails: (details) => items.any((item) => item == null),
+            onAcceptWithDetails: (details) {
+              final box = context.findRenderObject() as RenderBox;
+              final localOffset = box.globalToLocal(details.offset);
 
-        onDrop(details.data, position);
-      },
-      builder: (context, candidate, rejected) {
-        return Stack(
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFFD18A46), Color(0xFF7A3F1E), Color(0xFF32170C)],
-                ),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFE7AE70), width: 2),
-                boxShadow: const [
-                  BoxShadow(color: Color(0xBB000000), blurRadius: 12, offset: Offset(0, 7)),
-                  BoxShadow(color: Color(0x55FFD28A), blurRadius: 3, offset: Offset(0, -1)),
+              int? position;
+              for (var index = 0; index < 3; index++) {
+                final left = index * (itemSize + gap);
+                final rect = Rect.fromLTWH(left, 0, itemSize, itemSize + 2);
+                if (rect.contains(localOffset) && items[index] == null) {
+                  position = index;
+                  break;
+                }
+              }
+
+              onDrop(details.data, position);
+            },
+            builder: (context, candidate, rejected) {
+              return Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  for (var position = 0; position < 3; position++)
+                    Positioned(
+                      left: position * (itemSize + gap),
+                      top: 0,
+                      width: itemSize,
+                      height: itemSize,
+                      child: items[position] == null
+                          ? const SizedBox.expand()
+                          : _TrayItem(
+                              item: items[position]!,
+                              size: itemSize,
+                            ),
+                    ),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    top: lineTop,
+                    height: lineHeight,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color(0xFFB66A32),
+                            Color(0xFFE6A15C),
+                            Color(0xFF8A481F),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(4),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x88000000),
+                            blurRadius: 2,
+                            offset: Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
-              ),
-            ),
-            for (var position = 0; position < 3; position++)
-              Positioned(
-                left: 6 + position * 53.0,
-                top: 24,
-                width: 50,
-                height: 54,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    if (items[position] != null)
-                      Positioned(left: 0, right: 0, bottom: 3, height: 50, child: _TrayItem(item: items[position]!)),
-                  ],
-                ),
-              ),
-          ],
+              );
+            },
+          ),
         );
       },
     );
@@ -713,9 +789,13 @@ class _SortingTray extends StatelessWidget {
 }
 
 class _TrayItem extends StatelessWidget {
-  const _TrayItem({required this.item});
+  const _TrayItem({
+    required this.item,
+    required this.size,
+  });
 
   final SortingItem item;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
@@ -724,14 +804,21 @@ class _TrayItem extends StatelessWidget {
       maxSimultaneousDrags: 1,
       feedback: Material(
         color: Colors.transparent,
-        child: Transform.scale(scale: 1.12, child: SizedBox(width: 50, height: 50, child: _visual())),
+        child: Transform.scale(
+          scale: 1.12,
+          child: SizedBox(width: size, height: size, child: _visual()),
+        ),
       ),
       childWhenDragging: Opacity(opacity: .25, child: _visual()),
       child: _visual(),
     );
   }
 
-  Widget _visual() => SizedBox(width: 50, height: 50, child: SvgPicture.asset(item.asset, fit: BoxFit.contain));
+  Widget _visual() => SizedBox(
+        width: size,
+        height: size,
+        child: SvgPicture.asset(item.asset, fit: BoxFit.contain),
+      );
 }
 
 class _Actions extends StatelessWidget {
