@@ -12,6 +12,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   flutter_svg: ^2.2.0
   shared_preferences: ^2.5.3
+  lottie: ^3.6.1
 
 dev_dependencies:
   flutter_test:
@@ -23,3 +24,4 @@ flutter:
   assets:
     - assets/images/products/
     - assets/images/products/3d/
+    - assets/images/result/
