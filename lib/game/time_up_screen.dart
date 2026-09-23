@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:lottie/lottie.dart';
 
 class TimeUpScreen extends StatefulWidget {
   const TimeUpScreen({
@@ -79,7 +80,23 @@ class _TimeUpScreenState extends State<TimeUpScreen> with TickerProviderStateMix
                           BoxShadow(color: Color(0x668A271B), blurRadius: 25, spreadRadius: 5),
                         ],
                       ),
-                      child: SvgPicture.asset('assets/images/result/alarm_clock.svg'),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Lottie.asset(
+                            'assets/animations/timer_clock.json',
+                            width: 76,
+                            height: 76,
+                            repeat: true,
+                            fit: BoxFit.contain,
+                          ),
+                          SvgPicture.asset(
+                            'assets/images/result/alarm_clock.svg',
+                            width: 62,
+                            height: 62,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 24),
