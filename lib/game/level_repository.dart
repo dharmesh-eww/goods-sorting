@@ -16,68 +16,47 @@ class LevelRepository {
   static const int maxLevel = 2500;
   static const int unityLevelDefinitionCount = 5;
 
+  /// Curated CC0 3D-style grocery/game item renders.
+  ///
+  /// These replace the previous custom SVG placeholders with a consistent
+  /// transparent-background asset set better suited to the sorting board.
   static const _productAssets = <String>[
-    'assets/images/products/3d/apple_red.svg',
-    'assets/images/products/3d/banana_bunch.svg',
-    'assets/images/products/3d/orange.svg',
-    'assets/images/products/3d/lemon.svg',
-    'assets/images/products/3d/strawberry.svg',
-    'assets/images/products/3d/watermelon.svg',
-    'assets/images/products/3d/grapes.svg',
-    'assets/images/products/3d/peach.svg',
-    'assets/images/products/3d/pear.svg',
-    'assets/images/products/3d/pineapple.svg',
-    'assets/images/products/3d/milk_carton.svg',
-    'assets/images/products/3d/orange_juice.svg',
-    'assets/images/products/3d/apple_juice.svg',
-    'assets/images/products/3d/chocolate_milk.svg',
-    'assets/images/products/3d/strawberry_milk.svg',
-    'assets/images/products/3d/cola_can.svg',
-    'assets/images/products/3d/lemon_soda.svg',
-    'assets/images/products/3d/energy_can.svg',
-    'assets/images/products/3d/sparkling_can.svg',
-    'assets/images/products/3d/iced_tea.svg',
-    'assets/images/products/3d/chips_red.svg',
-    'assets/images/products/3d/chips_blue.svg',
-    'assets/images/products/3d/popcorn.svg',
-    'assets/images/products/3d/pretzels.svg',
-    'assets/images/products/3d/cookies_pack.svg',
-    'assets/images/products/3d/choco_bar.svg',
-    'assets/images/products/3d/wafer.svg',
-    'assets/images/products/3d/candy_box.svg',
-    'assets/images/products/3d/gum_pack.svg',
-    'assets/images/products/3d/cereal_box.svg',
-    'assets/images/products/3d/coffee.svg',
-    'assets/images/products/3d/tea_box.svg',
-    'assets/images/products/3d/sugar.svg',
-    'assets/images/products/3d/flour.svg',
-    'assets/images/products/3d/salt.svg',
-    'assets/images/products/3d/ketchup.svg',
-    'assets/images/products/3d/mustard.svg',
-    'assets/images/products/3d/mayo.svg',
-    'assets/images/products/3d/hot_sauce.svg',
-    'assets/images/products/3d/honey.svg',
-    'assets/images/products/3d/shampoo.svg',
-    'assets/images/products/3d/conditioner.svg',
-    'assets/images/products/3d/body_wash.svg',
-    'assets/images/products/3d/lotion.svg',
-    'assets/images/products/3d/soap.svg',
-    'assets/images/products/3d/toothpaste.svg',
-    'assets/images/products/3d/toothbrush.svg',
-    'assets/images/products/3d/detergent.svg',
-    'assets/images/products/3d/cleaner.svg',
-    'assets/images/products/3d/tissue.svg',
-    'assets/images/products/3d/soda_bottle.svg',
-    'assets/images/products/3d/water_bottle.svg',
-    'assets/images/products/3d/sports_drink.svg',
-    'assets/images/products/3d/milk_bottle.svg',
-    'assets/images/products/3d/protein_shake.svg',
-    'assets/images/products/3d/cupcake.svg',
-    'assets/images/products/3d/donut.svg',
-    'assets/images/products/3d/ice_cream.svg',
-    'assets/images/products/3d/cheese.svg',
-    'assets/images/products/3d/bread.svg',
-    'assets/images/products/3d/soap_green.svg',
+    'assets/images/products/3d/bread.png',
+    'assets/images/products/3d/sandwich.png',
+    'assets/images/products/3d/tosti.png',
+    'assets/images/products/3d/burger.png',
+    'assets/images/products/3d/hotdog.png',
+    'assets/images/products/3d/pizza_slice.png',
+    'assets/images/products/3d/taco.png',
+    'assets/images/products/3d/burrito.png',
+    'assets/images/products/3d/donut.png',
+    'assets/images/products/3d/cookies.png',
+    'assets/images/products/3d/chocolate_bar.png',
+    'assets/images/products/3d/candy.png',
+    'assets/images/products/3d/chips_bag.png',
+    'assets/images/products/3d/apple.png',
+    'assets/images/products/3d/banana.png',
+    'assets/images/products/3d/grape.png',
+    'assets/images/products/3d/orange.png',
+    'assets/images/products/3d/strawberry.png',
+    'assets/images/products/3d/corn.png',
+    'assets/images/products/3d/tomato.png',
+    'assets/images/products/3d/cooked_fish.png',
+    'assets/images/products/3d/steak.png',
+    'assets/images/products/3d/water_bottle.png',
+    'assets/images/products/3d/coffee.png',
+    'assets/images/products/3d/kurkakola.png',
+    'assets/images/products/3d/sprunk.png',
+    'assets/images/products/3d/energy_drink.png',
+    'assets/images/products/3d/grapejuice.png',
+    'assets/images/products/3d/milkshake.png',
+    'assets/images/products/3d/tea_cup.png',
+    'assets/images/products/3d/juice_carton.png',
+    'assets/images/products/3d/milk_carton.png',
+    'assets/images/products/3d/soda_bottle.png',
+    'assets/images/products/3d/empty_bottle.png',
+    'assets/images/products/3d/ice_cubes.png',
+    'assets/images/products/3d/coconut_water.png',
   ];
 
   /// Unity's LevelManager uses `_levelId % levels.Length`.
@@ -101,9 +80,6 @@ class LevelRepository {
     final itemTypes = _itemTypes(level);
     final groupsPerLayer = _groupsPerLayer(shelfCount);
 
-    // A group is always exactly three matching products. The number of
-    // groups grows with stack depth, giving early levels a compact board
-    // while preserving enough layers to make the puzzle progressively deeper.
     final maxGroups = (shelfCount * maxStackDepth) ~/ 3;
     final groupCount = min(
       maxGroups,
@@ -115,8 +91,6 @@ class LevelRepository {
       (index) => (index + level + random.nextInt(itemTypes)) % itemTypes,
     );
 
-    // Avoid adjacent groups using the same product when possible. This keeps
-    // the early board visually varied without breaking the triple guarantee.
     products.shuffle(random);
     for (var i = 1; i < products.length; i++) {
       if (products[i] == products[i - 1] && itemTypes > 1) {
@@ -199,8 +173,7 @@ class LevelRepository {
     if (level <= 50) return 12;
     if (level <= 150) return 18;
     if (level <= 350) return 30;
-    if (level <= 700) return 45;
-    return 60;
+    return 36;
   }
 
   static int _shelfCount(int level) {
