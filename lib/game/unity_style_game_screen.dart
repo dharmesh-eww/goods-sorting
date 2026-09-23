@@ -6,6 +6,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import 'game_currency.dart';
 import 'level_generator.dart';
+import 'level_complete_screen.dart';
+import 'time_up_screen.dart';
 import 'level_progress.dart';
 import 'sorting_item.dart';
 
@@ -241,6 +243,7 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen> with Ticker
 
   Future<void> _finish(bool win, {bool timedOut = false}) async {
     if (gameOver || !mounted) return;
+
     gameOver = true;
     timer?.cancel();
 
@@ -253,44 +256,88 @@ class _UnityStyleGameScreenState extends State<UnityStyleGameScreen> with Ticker
       score += earned * 10;
       coins = GameCurrency.instance.coins;
     }
+
     if (!mounted) return;
-    await Future<void>.delayed(const Duration(seconds: 2));
-    if (!mounted) return;
-    showGeneralDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      barrierColor: const Color(0x99000000),
-      transitionDuration: const Duration(milliseconds: 500),
-      pageBuilder: (_, __, ___) => _ResultPanel(
-        win: win,
-        level: widget.levelNumber,
-        score: score,
-        moves: moves,
-        earned: earned,
-        timedOut: timedOut,
-        onPrimary: () {
-          Navigator.pop(context);
-          if (win && widget.levelNumber < 2500) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => UnityStyleGameScreen(levelNumber: widget.levelNumber + 1)),
+
+    if (win) {
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder<void>(
+          transitionDuration: const Duration(milliseconds: 450),
+          reverseTransitionDuration: const Duration(milliseconds: 350),
+          pageBuilder: (_, animation, __) => LevelCompleteScreen(
+            levelNumber: widget.levelNumber,
+            score: score,
+            moves: moves,
+            earnedCoins: earned,
+            onNext: () {
+              if (widget.levelNumber >= LevelProgress.maxLevel) {
+                Navigator.pop(context);
+                return;
+              }
+
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => UnityStyleGameScreen(
+                    levelNumber: widget.levelNumber + 1,
+                  ),
+                ),
+              );
+            },
+            onLevels: () => Navigator.pop(context),
+          ),
+          transitionsBuilder: (_, animation, __, child) {
+            final curved = CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOutCubic,
             );
-          } else if (!win) {
-            _reset();
-          } else {
-            Navigator.pop(context);
-          }
-        },
-        onLevels: () {
-          Navigator.pop(context);
-          Navigator.pop(context);
-        },
-      ),
-      transitionBuilder: (_, animation, __, child) => ScaleTransition(
-        scale: CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
-        child: FadeTransition(opacity: animation, child: child),
-      ),
-    );
+            return FadeTransition(
+              opacity: curved,
+              child: ScaleTransition(
+                scale: Tween<double>(begin: .96, end: 1).animate(curved),
+                child: child,
+              ),
+            );
+          },
+        ),
+      );
+    } else if (timedOut) {
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder<void>(
+          transitionDuration: const Duration(milliseconds: 450),
+          reverseTransitionDuration: const Duration(milliseconds: 350),
+          pageBuilder: (_, animation, __) => TimeUpScreen(
+            levelNumber: widget.levelNumber,
+            onRetry: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => UnityStyleGameScreen(
+                    levelNumber: widget.levelNumber,
+                  ),
+                ),
+              );
+            },
+            onLevels: () => Navigator.pop(context),
+          ),
+          transitionsBuilder: (_, animation, __, child) {
+            final curved = CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOutCubic,
+            );
+            return FadeTransition(
+              opacity: curved,
+              child: ScaleTransition(
+                scale: Tween<double>(begin: .97, end: 1).animate(curved),
+                child: child,
+              ),
+            );
+          },
+        ),
+      );
+    }
   }
 
   void _toast(String text) {
@@ -959,165 +1006,6 @@ class _CoinPill extends StatelessWidget {
       ),
     );
   }
-}
-
-class _ResultPanel extends StatelessWidget {
-  const _ResultPanel({
-    required this.win,
-    required this.level,
-    required this.score,
-    required this.moves,
-    required this.earned,
-    required this.timedOut,
-    required this.onPrimary,
-    required this.onLevels,
-  });
-
-  final bool win;
-  final bool timedOut;
-  final int level;
-  final int score;
-  final int moves;
-  final int earned;
-  final VoidCallback onPrimary;
-  final VoidCallback onLevels;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFE8BC),
-              borderRadius: BorderRadius.circular(29),
-              border: Border.all(color: const Color(0xFFD18A43), width: 2),
-              boxShadow: const [BoxShadow(color: Color(0x99000000), blurRadius: 20, offset: Offset(0, 10))],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 82,
-                  height: 82,
-                  decoration: BoxDecoration(
-                    color: win ? const Color(0xFFFFB52E) : const Color(0xFFE66E43),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(win ? Icons.emoji_events_rounded : Icons.close_rounded, size: 50, color: Colors.white),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  win ? 'LEVEL COMPLETE!' : 'LEVEL FAILED',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Color(0xFF653918)),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  win
-                      ? 'Great sorting! The shelf is clean.'
-                      : timedOut
-                      ? 'Time is up. Try again.'
-                      : 'No sorting space left. Try another order.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF8B5B36)),
-                ),
-                if (win)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 10),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.star_rounded, size: 34, color: Color(0xFFFFB51D)),
-                        SizedBox(width: 4),
-                        Icon(Icons.star_rounded, size: 43, color: Color(0xFFFFB51D)),
-                        SizedBox(width: 4),
-                        Icon(Icons.star_rounded, size: 34, color: Color(0xFFFFB51D)),
-                      ],
-                    ),
-                  ),
-                const SizedBox(height: 14),
-                Row(children: [_Stat('LEVEL', '$level'), _Stat('SCORE', '$score'), _Stat('MOVES', '$moves')]),
-                if (win)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 11),
-                    child: Text(
-                      '+$earned COINS',
-                      style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF80400A)),
-                    ),
-                  ),
-                const SizedBox(height: 16),
-                _WideButton(
-                  win ? 'NEXT' : 'TRY AGAIN',
-                  win ? Icons.arrow_forward_rounded : Icons.refresh_rounded,
-                  onPrimary,
-                ),
-                TextButton(
-                  onPressed: onLevels,
-                  child: const Text(
-                    'LEVELS',
-                    style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF754522)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Stat extends StatelessWidget {
-  const _Stat(this.label, this.value);
-  final String label, value;
-  @override
-  Widget build(BuildContext context) => Expanded(
-    child: Container(
-      margin: const EdgeInsets.symmetric(horizontal: 3),
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      decoration: BoxDecoration(color: const Color(0xFFF8D8A6), borderRadius: BorderRadius.circular(13)),
-      child: Column(
-        children: [
-          Text(
-            label,
-            style: const TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Color(0xFF8B5B36)),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Color(0xFF653918)),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-class _WideButton extends StatelessWidget {
-  const _WideButton(this.label, this.icon, this.onTap);
-  final String label;
-  final IconData icon;
-  final VoidCallback onTap;
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    width: double.infinity,
-    height: 54,
-    child: ElevatedButton.icon(
-      onPressed: onTap,
-      icon: Icon(icon),
-      label: Text(label, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, letterSpacing: .8)),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFFF19A24),
-        foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      ),
-    ),
-  );
 }
 
 BoxDecoration _box() => BoxDecoration(
